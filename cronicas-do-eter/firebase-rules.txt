@@ -11,6 +11,12 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    function isBootstrapAdminEmail() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email == 'matheuscarvalho696@gmail.com';
+    }
+
     function isAdmin() {
       return signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
@@ -20,16 +26,46 @@ service cloud.firestore {
 
     match /settings/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isBootstrapAdminEmail();
     }
 
     match /users/{userId} {
-      allow create: if isSelf(userId);
+      // O jogador cria apenas a própria conta.
+      // A conta bootstrap do Matheus pode nascer como admin.
+      allow create: if isSelf(userId) && (
+        (
+          request.resource.data.role == 'player'
+          && request.resource.data.status == 'approved'
+        )
+        ||
+        (
+          isBootstrapAdminEmail()
+          && request.resource.data.role == 'admin'
+          && request.resource.data.status == 'approved'
+        )
+      );
+
       allow read: if isSelf(userId) || isAdmin();
+
+      // Usuário pode atualizar dados próprios, mas não pode se promover.
       allow update: if isSelf(userId)
         && !('role' in request.resource.data.diff(resource.data).changedKeys())
-        && !('status' in request.resource.data.diff(resource.data).changedKeys());
+        && !('status' in request.resource.data.diff(resource.data).changedKeys())
+        && !('premium' in request.resource.data.diff(resource.data).changedKeys());
+
+      // A conta bootstrap do Matheus pode corrigir a si mesma para admin.
+      allow update: if isSelf(userId)
+        && isBootstrapAdminEmail()
+        && request.resource.data.role == 'admin'
+        && request.resource.data.status == 'approved';
+
       allow update, delete: if isAdmin();
+    }
+
+    match /logs/{docId} {
+      allow create: if signedIn();
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
 
     match /{document=**} {

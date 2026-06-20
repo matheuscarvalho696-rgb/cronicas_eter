@@ -39,9 +39,14 @@
     <div id="adminStatus" class="info-card"><p>Carregando...</p></div>
     <div id="accessPanel" class="info-card hidden">
       <h3>Configurações de Acesso</h3>
-      <label class="field-label">Código de convite
+      <label class="field-label">Código de convite atual
         <input id="adminInviteCode" type="text" placeholder="CRONICAS2026" />
       </label>
+      <div class="auth-actions compact-actions">
+        <button id="generateInviteCode" class="btn-secondary" type="button">Gerar código aleatório</button>
+        <button id="copyInviteCode" class="btn-secondary" type="button">Copiar código</button>
+      </div>
+      <p class="muted small-note">Envie esse código manualmente aos seus jogadores. Envio automático por e-mail exigirá backend/Cloud Functions numa sprint futura.</p>
       <label class="checkbox-line"><input id="adminFamiliarFree" type="checkbox" /> Familiar liberado para visitantes</label>
       <label class="checkbox-line"><input id="adminMaintenance" type="checkbox" /> Modo manutenção</label>
       <button id="saveSettings" class="btn-primary" type="button">Salvar Configurações</button>
@@ -67,6 +72,8 @@ const inviteInput = document.getElementById('adminInviteCode');
 const familiarFreeInput = document.getElementById('adminFamiliarFree');
 const maintenanceInput = document.getElementById('adminMaintenance');
 const settingsMessage = document.getElementById('settingsMessage');
+const generateInviteCodeBtn = document.getElementById('generateInviteCode');
+const copyInviteCodeBtn = document.getElementById('copyInviteCode');
 const usersList = document.getElementById('usersList');
 
 function setSettingsMessage(text, type='') { settingsMessage.textContent = text; settingsMessage.className = 'auth-message ' + type; }
@@ -137,7 +144,30 @@ async function loadUsers(){
   snap.forEach(docSnap => usersList.appendChild(renderUserRow({ uid: docSnap.id, ...docSnap.data() })));
 }
 
+
+function makeInviteCode(){
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'ETER-';
+  for (let i = 0; i < 8; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return code;
+}
+
+generateInviteCodeBtn.addEventListener('click', () => {
+  inviteInput.value = makeInviteCode();
+  setSettingsMessage('Novo código gerado. Clique em Salvar Configurações para ativá-lo.', 'success');
+});
+
+copyInviteCodeBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(inviteInput.value.trim());
+    setSettingsMessage('Código copiado.', 'success');
+  } catch (err) {
+    setSettingsMessage('Não foi possível copiar automaticamente. Selecione e copie manualmente.', 'error');
+  }
+});
+
 document.getElementById('saveSettings').addEventListener('click', () => saveSettings().catch(err => setSettingsMessage(err.message || 'Erro ao salvar.', 'error')));
+
 
 watchAuth(async ({ user, profile, configured }) => {
   if (!configured) { statusBox.innerHTML = '<h3>Firebase não configurado</h3><p>Preencha firebase-config.js para ativar o painel.</p>'; return; }
