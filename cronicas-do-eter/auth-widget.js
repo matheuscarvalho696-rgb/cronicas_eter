@@ -5,7 +5,6 @@ import { watchAuth, logout, hasApprovedAccess, isAdmin } from "./auth-service.js
 
 function rootPrefix() {
   const parts = location.pathname.split('/').filter(Boolean);
-  const file = parts[parts.length - 1] || 'index.html';
   const parent = parts[parts.length - 2] || '';
   return (parent === 'racas' || parent === 'classes') ? '../' : '';
 }
@@ -30,12 +29,23 @@ function addTopLoginLink() {
   link.className = "top-login-link";
   link.href = url("login.html");
   link.textContent = "Entrar";
-  const toggle = topbar.querySelector(".nav-toggle");
-  if (toggle) topbar.insertBefore(link, toggle);
-  else topbar.appendChild(link);
+  topbar.appendChild(link);
+}
+
+function setAuthClasses(state, profile) {
+  document.body.classList.remove('auth-guest', 'auth-logged', 'auth-approved', 'auth-admin');
+  if (state === 'approved') {
+    document.body.classList.add('auth-logged', 'auth-approved');
+    if (isAdmin(profile)) document.body.classList.add('auth-admin');
+  } else if (state === 'logged') {
+    document.body.classList.add('auth-logged');
+  } else {
+    document.body.classList.add('auth-guest');
+  }
 }
 
 function renderLoggedOut(box, configured) {
+  setAuthClasses('guest');
   if (!box) return;
   box.innerHTML = `
     <div class="auth-title">Acesso</div>
@@ -50,10 +60,11 @@ function renderLoggedOut(box, configured) {
 }
 
 function renderLoggedIn(box, user, profile) {
+  const approved = hasApprovedAccess(profile);
+  setAuthClasses(approved ? 'approved' : 'logged', profile);
   if (!box) return;
   const nome = profile?.nome || user.displayName || user.email;
   const role = profile?.role || "player";
-  const approved = hasApprovedAccess(profile);
   const adminLink = isAdmin(profile) ? `<a class="auth-button outline" href="${url("admin.html")}">Painel Admin</a>` : "";
   box.innerHTML = `
     <div class="auth-title">${nome}</div>

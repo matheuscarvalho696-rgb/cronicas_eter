@@ -60,23 +60,27 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 </style>
 </head>
 <body><nav class="topbar">
-<a class="nav-brand" href="index.html">Crônicas do Éter</a>
-<a class="top-xp-link" href="calculadora.html">Calculadora XP/PT</a>
-<button aria-label="Abrir menu" class="nav-toggle">☰</button>
+  <button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button>
+  <a class="nav-brand" href="index.html">Crônicas do Éter</a>
 </nav>
-<aside aria-label="Menu lateral" class="sidebar">
-<div class="sidebar-title">Compêndio</div>
-<a href="index.html">Início</a>
-<a href="racas.html">Raças</a>
-<a href="classes.html">Classes</a>
-<a href="especializacoes.html">Especializações</a>
-<a href="talentos.html">Talentos</a>
-<a href="crie-personagem.html">Crie seu Personagem</a>
-<a href="habilidades.html">Habilidades</a>
-<a href="familiar.html">Familiar</a>
-<a href="divindades.html">Divindades</a>
-<a class="active" href="mercado.html">Mercado</a>
-<a href="criacao-equipamentos.html">Criação de Equipamentos</a>
+<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-title">Compêndio</div>
+    <button aria-label="Fechar menu" class="sidebar-close" type="button">×</button>
+  </div>
+  <a href="index.html">Início</a>
+  <a href="racas.html">Raças</a>
+  <a href="classes.html">Classes</a>
+  <a href="especializacoes.html">Especializações</a>
+  <a href="talentos.html">Talentos</a>
+  <a href="crie-personagem.html">Crie seu Personagem</a>
+  <a href="habilidades.html">Habilidades</a>
+  <a href="familiar.html">Familiar</a>
+  <a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Ferramentas</div>
+  <a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a>
+  <a class="active requires-auth" href="mercado.html">Mercado</a>
+  <a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside>
 
 <div id="stars"></div>
@@ -85,7 +89,7 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 <p class="page-eyebrow">Ferramenta do Jogador</p>
 <h1 class="page-title">Mercado</h1>
 <p class="page-intro">Selecione itens para montar o carrinho de compras. O total é calculado automaticamente em PC, PP, PA e PO. No modo venda, o valor é reduzido para metade.</p>
-<div class="tool-tabs access-tool-tabs" style="justify-content:center; margin-top:1.5rem;"><a class="tool-tab active" href="mercado.html">Mercado</a><a class="tool-tab" href="criacao-equipamentos.html">Criação de Equipamentos</a><span class="tool-tab disabled-tab">Acesso por login em breve</span></div></header>
+<div class="tool-tabs access-tool-tabs" style="justify-content:center; margin-top:1.5rem;"><a class="tool-tab active requires-auth" href="mercado.html">Mercado</a><a class="tool-tab requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a><span class="tool-tab disabled-tab">Acesso por login em breve</span></div></header>
 <section style="padding-top:1rem;"><div class="container">
 <div class="market-wrap">
 <main class="market-panel">
@@ -3734,7 +3738,7 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 </aside>
 </div>
 </div></section>
-<footer><span>Crônicas do Éter</span> — Sistema de RPG de Mesa<div class="footer-links"><a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="calculadora.html">Calculadora XP/PT</a><a href="mercado.html">Mercado</a></div></footer>
+<footer><span>Crônicas do Éter</span> — Sistema de RPG de Mesa<div class="footer-links"><a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a><a class="requires-auth" href="mercado.html">Mercado</a></div></footer>
 <script src="script.js"></script>
 <script>
 const groupOrder = ["Comércio de Armas", "Comércio de Armaduras", "Equipamentos Extras", "Modificação de Equipamentos", "Criação, Fundição e Poções", "Mercado Geral", "Taberna", "Animais", "Bens e Posses", "Criação de Equipamentos"];

@@ -1160,3 +1160,106 @@ body.nav-open { overflow: hidden; }
   .top-xp-link { display: none; }
   .nav-brand { max-width: 70vw; }
 }
+
+
+/* ========================================================
+   SPRINT 3.1 — MENU RETRÁTIL E LINKS PREMIUM OCULTOS (v22)
+   ======================================================== */
+body { padding-left: 0 !important; }
+.topbar {
+  left: 0 !important;
+  right: 0;
+  height: 64px;
+  padding: 0 1.25rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .85rem;
+}
+.nav-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: rgba(155,111,212,.10);
+  border: 1px solid rgba(185,143,232,.30) !important;
+  color: var(--ether-glow);
+  border-radius: 12px;
+  font-size: 1.35rem;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.nav-brand { margin-right: auto; }
+.top-xp-link { display: none !important; }
+.sidebar {
+  transform: translateX(-105%);
+  transition: transform .25s ease, box-shadow .25s ease;
+  top: 0 !important;
+  width: min(86vw, 320px) !important;
+  max-width: 320px;
+  box-shadow: none;
+  padding-top: 1rem;
+}
+.sidebar.open {
+  transform: translateX(0);
+  box-shadow: 18px 0 46px rgba(0,0,0,.48);
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin: .15rem .55rem 1rem;
+}
+.sidebar-title { margin: 0 !important; display: block !important; }
+.sidebar-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(185,143,232,.30);
+  background: rgba(155,111,212,.10);
+  color: var(--ether-pale);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.sidebar-close:hover,
+.nav-toggle:hover { background: rgba(155,111,212,.18); }
+.sidebar-divider {
+  font-family: 'Cinzel', serif;
+  font-size: .62rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 1rem .75rem .45rem;
+  padding-top: .85rem;
+  border-top: 1px solid rgba(185,143,232,.18);
+}
+.mobile-sidebar-backdrop {
+  inset: 0 !important;
+  z-index: 125;
+}
+body.nav-open .mobile-sidebar-backdrop { display: block; }
+body.nav-open { overflow: hidden; }
+
+/* Premium: oculto por padrão. O auth-widget libera apenas para conta aprovada. */
+.requires-auth { display: none !important; }
+body.auth-approved .requires-auth { display: flex !important; }
+a.requires-auth,
+body.auth-approved a.requires-auth { align-items: center; }
+body.auth-approved .cta-group.requires-auth,
+body.auth-approved section.requires-auth,
+body.auth-approved div.requires-auth { display: block !important; }
+body.auth-approved .sidebar-divider.requires-auth { display: block !important; }
+
+/* Home sem botões iniciais */
+#hero .cta-group { display: none !important; }
+
+@media (max-width: 700px) {
+  .topbar { height: 60px; padding: 0 .75rem !important; }
+  .nav-toggle { width: 40px; height: 40px; }
+  .nav-brand { font-size: .82rem; max-width: 56vw; }
+  .top-login-link { font-size: .64rem; padding: .42rem .58rem; margin: 0; }
+  .page-header { padding-top: 6.7rem; }
+}

@@ -1,4 +1,4 @@
-// Mobile navigation + visual helpers
+// Menu lateral retrátil + visual helpers
 (function () {
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
@@ -6,8 +6,9 @@
   }
 
   ready(() => {
-    const toggle = document.querySelector('.nav-toggle');
+    const toggles = document.querySelectorAll('.nav-toggle, .sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
+    const closeButton = document.querySelector('.sidebar-close');
 
     let backdrop = document.querySelector('.mobile-sidebar-backdrop');
     if (!backdrop) {
@@ -20,33 +21,33 @@
       if (!sidebar) return;
       sidebar.classList.remove('open');
       document.body.classList.remove('nav-open');
-      if (toggle) toggle.setAttribute('aria-expanded', 'false');
+      toggles.forEach(toggle => toggle.setAttribute('aria-expanded', 'false'));
     }
 
     function openMenu() {
       if (!sidebar) return;
       sidebar.classList.add('open');
       document.body.classList.add('nav-open');
-      if (toggle) toggle.setAttribute('aria-expanded', 'true');
+      toggles.forEach(toggle => toggle.setAttribute('aria-expanded', 'true'));
     }
 
-    if (toggle && sidebar) {
+    toggles.forEach(toggle => {
       toggle.setAttribute('aria-expanded', 'false');
       toggle.addEventListener('click', () => {
-        if (sidebar.classList.contains('open')) closeMenu();
+        if (sidebar && sidebar.classList.contains('open')) closeMenu();
         else openMenu();
       });
+    });
 
-      sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
-      backdrop.addEventListener('click', closeMenu);
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeMenu();
-      });
+    if (closeButton) closeButton.addEventListener('click', closeMenu);
+    if (sidebar) sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+    backdrop.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMenu();
+    });
 
-      window.addEventListener('resize', () => {
-        if (window.innerWidth > 920) closeMenu();
-      });
-    }
+    // Links premium aparecem apenas quando o auth-widget marcar body.auth-approved.
+    // O CSS já deixa esses links escondidos por padrão.
 
     // Scroll reveal
     const reveals = document.querySelectorAll('.reveal');
