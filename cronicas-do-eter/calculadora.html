@@ -67,11 +67,13 @@
   <a href="especializacoes.html">Especializações</a>
   <a href="talentos.html">Talentos</a>
   <a href="crie-personagem.html">Crie seu Personagem</a>
-  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
   <a href="habilidades.html">Habilidades</a>
   <a href="familiar.html">Familiar</a>
-  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
+  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
+  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="active requires-auth" href="calculadora.html">Calculadora XP/PT</a>
   <a class="requires-auth" href="mercado.html">Mercado</a>
@@ -90,6 +92,12 @@
 <div class="calc-wrap">
 <aside class="panel sticky reveal">
 <h3>⚙ Resumo</h3>
+<div class="requires-auth" style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+  <label>Carregar personagem</label>
+  <select id="loadCharacterSelect"><option value="">Selecione um personagem salvo</option></select>
+  <button class="reset-btn" id="loadCharacterBtn" type="button" style="margin-top:.6rem">Carregar Pontos Atuais</button>
+  <p class="mini">Carrega atributos, focos, atributos especiais e regeneração salvos no personagem.</p>
+</div>
 <div class="two">
 <div><label>XP disponível</label><input id="xpTotal" min="0" step="0.25" type="number" value="0"/></div>
 <div><label>PT disponível</label><input id="ptTotal" min="0" step="1" type="number" value="0"/></div>
@@ -703,9 +711,40 @@ render();
 </script>
 <script type="module" src="auth-widget.js"></script>
 <script type="module" src="auth-guard.js"></script><script type="module">
-import { watchAuth, saveDistribution, hasApprovedAccess } from './auth-service.js';
+import { watchAuth, saveDistribution, hasApprovedAccess, listMyCharacters } from './auth-service.js';
 let currentProfile = null;
-watchAuth(({ profile }) => { currentProfile = profile; });
+let loadedCharacters = [];
+function slugCalc(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
+function setCurrentByName(name, value){
+  const line=[...document.querySelectorAll('.range-line')].find(el => (el.querySelector('.range-name')?.textContent||'').trim().toLowerCase().startsWith(String(name).toLowerCase()));
+  if(!line) return;
+  const input=line.querySelector('[data-kind="current"]');
+  if(input){ input.value=Number(value)||0; input.dispatchEvent(new Event('input',{bubbles:true})); }
+}
+async function populateCharacterLoader(){
+  const sel=document.getElementById('loadCharacterSelect');
+  if(!sel || !hasApprovedAccess(currentProfile) || currentProfile.premium !== true) return;
+  try{
+    loadedCharacters=await listMyCharacters();
+    sel.innerHTML='<option value="">Selecione um personagem salvo</option>'+loadedCharacters.map((c,i)=>`<option value="${i}">${c.nome||'Sem nome'} — ${c.raca||''} ${c.classe||''}</option>`).join('');
+  }catch(err){ console.warn('Não foi possível carregar personagens:', err); }
+}
+watchAuth(({ profile }) => { currentProfile = profile; populateCharacterLoader(); });
+const loadBtn=document.getElementById('loadCharacterBtn');
+if(loadBtn){ loadBtn.addEventListener('click',()=>{
+  const sel=document.getElementById('loadCharacterSelect'); const c=loadedCharacters[Number(sel?.value)];
+  if(!c) return alert('Selecione um personagem salvo.');
+  const pontos=c.simulacao?.pontosAtuais || c.pontosAtuais || {};
+  Object.entries(pontos.atributos||{}).forEach(([k,v])=>setCurrentByName(k,v));
+  Object.entries(pontos.focos||{}).forEach(([k,v])=>setCurrentByName(k,v));
+  Object.entries(pontos.especiais||{}).forEach(([k,v])=>setCurrentByName(k,v));
+  if(pontos.regeneracao!==undefined) setCurrentByName('Regeneração', pontos.regeneracao);
+  const sim=c.simulacao||{};
+  if(sim.xpDisponivel!==undefined) document.getElementById('xpTotal').value=sim.xpDisponivel;
+  if(sim.ptDisponivel!==undefined) document.getElementById('ptTotal').value=sim.ptDisponivel;
+  if(typeof calc==='function') calc();
+});}
+
 window.addEventListener('cronicas:distributionValidated', async (event) => {
   try {
     if (!hasApprovedAccess(currentProfile) || currentProfile.premium !== true) return;

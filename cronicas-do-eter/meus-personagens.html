@@ -10,14 +10,15 @@
   <a href="especializacoes.html">Especializações</a>
   <a href="talentos.html">Talentos</a>
   <a href="crie-personagem.html">Crie seu Personagem</a>
-  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
   <a href="habilidades.html">Habilidades</a>
   <a href="familiar.html">Familiar</a>
-  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
+  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
+  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a>
-  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
   <a class="requires-auth" href="mercado.html">Mercado</a>
   <a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside><div id="stars"></div><header class="page-header"><p class="breadcrumb"><a href="index.html">Início</a> / Meus Personagens</p><p class="page-eyebrow">Área Premium</p><h1 class="page-title">Meus Personagens</h1><p class="page-intro">Personagens criados e salvos na sua conta.</p></header><section><div class="container"><div class="note reveal"><strong>Dica:</strong> para criar um novo personagem, acesse “Crie seu Personagem”, preencha os dados e clique em “Salvar Personagem”.</div><div id="charactersList" class="info-grid reveal"></div></div></section><footer><span>Crônicas do Éter</span> — Plataforma do Jogador</footer><script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script><script type="module">
@@ -29,7 +30,7 @@ watchAuth(async ({profile})=>{
  try{
   const chars=await listMyCharacters();
   if(!chars.length){ box.innerHTML='<div class="info-card"><h4>Nenhum personagem salvo</h4><p>Crie seu primeiro personagem na ferramenta “Crie seu Personagem”.</p></div>'; return; }
-  box.innerHTML=chars.map(c=>`<div class="info-card"><h4>${c.nome||'Personagem sem nome'}</h4><p><strong>${c.raca||'-'}</strong> — ${c.variante||'-'}</p><ul><li>Classe: ${c.classe||'-'}</li><li>Subclasse: ${c.subclasse||'-'}</li><li>Especialização: ${c.especializacao||'-'}</li><li>Elemento natural: ${c.elementoNatural||'-'}</li><li>Salvo em: ${fmtDate(c.createdAt)}</li></ul><p>${c.resumo?.dica||''}</p></div>`).join('');
+  box.innerHTML=chars.map(c=>{ const sim=c.simulacao||{}; const vit=sim.vitalidadesSimuladas||{}; const comb=sim.combate||{}; const talentos=Array.isArray(c.talentos)?c.talentos:[]; return `<div class="info-card"><h4>${c.nome||'Personagem sem nome'}</h4><p><strong>${c.raca||'-'}</strong> — ${c.variante||'-'}</p><ul><li>Classe: ${c.classe||'-'}</li><li>Subclasse: ${c.subclasse||'-'}</li><li>Especialização: ${c.especializacao||'-'}</li><li>Elemento natural: ${c.elementoNatural||'-'}</li><li>Ranque inicial: ${c.rankInicial||'-'}</li><li>Vitalidades simuladas: ${vit.vida??'-'} vida / ${vit.mana??'-'} mana / ${vit.energia??'-'} energia</li><li>CA simulada: ${comb.caSimulada??'-'} | Acerto: +${comb.acertoSimulado??0}</li><li>Talentos: ${talentos.length?talentos.join(', '):'nenhum'}</li><li>Salvo em: ${fmtDate(c.createdAt)}</li></ul><p>${c.resumo?.dica||''}</p></div>`}).join('');
  }catch(err){ box.innerHTML=`<div class="info-card"><h4>Erro</h4><p>${err.message}</p></div>`; }
 });
 </script></body></html>

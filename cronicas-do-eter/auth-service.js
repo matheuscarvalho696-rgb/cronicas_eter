@@ -405,6 +405,11 @@ export async function saveCharacter(character) {
     subclasse: cleanText(character.subclasse),
     especializacao: cleanText(character.especializacao),
     elementoNatural: cleanText(character.elementoNatural),
+    rankInicial: cleanText(character.rankInicial, "D"),
+    talentos: Array.isArray(character.talentos) ? character.talentos : [],
+    distribuicaoInicial: character.distribuicaoInicial || {},
+    simulacao: character.simulacao || {},
+    equipamentosSimulados: character.equipamentosSimulados || {},
     resumo: character.resumo || {},
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()

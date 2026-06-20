@@ -6,7 +6,7 @@
 <title>Crie seu Personagem — Crônicas do Éter</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&amp;family=Cinzel:wght@400;600;700&amp;family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet"/>
 <link href="styles.css" rel="stylesheet"/>
-</head><body><nav class="topbar">
+<style>.talent-check-grid{display:grid;grid-template-columns:1fr;gap:.45rem;margin-top:.45rem}.talent-check-grid label{display:flex;gap:.5rem;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--font-body, serif);font-size:.95rem}.talent-check-grid input{width:auto}.sim-box{margin-top:1rem;padding:1rem;border:1px solid var(--border);background:rgba(255,255,255,.03)}.point-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}.point-grid label{font-size:.68rem;margin-bottom:.2rem}.point-grid input{padding:.45rem .55rem}@media(min-width:850px){.talent-check-grid{grid-template-columns:1fr 1fr}}</style></head><body><nav class="topbar">
   <button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button>
   <a class="nav-brand" href="index.html">Crônicas do Éter</a>
 </nav>
@@ -24,11 +24,13 @@
   <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
   <a href="habilidades.html">Habilidades</a>
   <a href="familiar.html">Familiar</a>
-  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
+  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
+  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a>
-  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
   <a class="requires-auth" href="mercado.html">Mercado</a>
   <a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside>
@@ -41,8 +43,29 @@
 <label class="form-label" for="raceSelect">Raça</label><select class="ether-input" id="raceSelect"></select>
 <label class="form-label" for="variantSelect">Variante</label><select class="ether-input" id="variantSelect"></select>
 <label class="form-label" for="classSelect">Classe</label><select class="ether-input" id="classSelect"></select>
-<label class="form-label" for="subclassInput">Subclasse / Caminho Narrativo</label><input class="ether-input" id="subclassInput" placeholder="Ex: Cavaleiro errante, caçador urbano, discípulo arcano" type="text"/>
+<label class="form-label" for="subclassSelect">Subclasse</label><select class="ether-input" id="subclassSelect"></select>
 <label class="form-label" for="specializationSelect">Especialização</label><select class="ether-input" id="specializationSelect"></select>
+<div class="premium-builder requires-auth" style="margin-top:1.2rem;border-top:1px solid var(--border);padding-top:1rem">
+<h3>Construção Premium</h3>
+<label class="form-label" for="rankSelect">Ranque Inicial</label><select class="ether-input" id="rankSelect"><option value="D">D — 0 XP / 0 PT</option><option value="C">C — 318 XP / 636 PT</option><option value="B">B — 726 XP / 1452 PT</option><option value="A">A — 1621 XP / 3242 PT</option><option value="S">S — 2761 XP / 5522 PT</option><option value="SSS">SSS — 4336 XP / 8672 PT</option></select>
+<label class="form-label" for="characterLevel">Nível para simulação</label><input class="ether-input" id="characterLevel" min="1" max="30" type="number" value="1"/>
+<div style="margin-top:.85rem"><label class="form-label">Pontos atuais — Atributos</label><div class="two-columns point-grid" id="attrPointGrid"></div></div>
+<div style="margin-top:.85rem"><label class="form-label">Pontos atuais — Focos</label><div class="two-columns point-grid" id="focusPointGrid"></div></div>
+<div style="margin-top:.85rem"><label class="form-label">Pontos atuais — Atributos Especiais</label><div class="two-columns point-grid" id="specialPointGrid"></div></div>
+<div class="two-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+<div><label class="form-label">Vida distribuída</label><input class="ether-input" id="distVida" min="0" type="number" value="0"/></div>
+<div><label class="form-label">Mana distribuída</label><input class="ether-input" id="distMana" min="0" type="number" value="0"/></div>
+<div><label class="form-label">Energia distribuída</label><input class="ether-input" id="distEnergia" min="0" type="number" value="0"/></div>
+<div><label class="form-label">Regeneração</label><input class="ether-input" id="distRegeneracao" min="0" type="number" value="0"/></div>
+</div>
+<div class="two-columns" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem">
+<div><label class="form-label">Armadura / CA</label><select class="ether-input" id="armorSelect"><option value="0">Sem armadura</option><option value="2">Veste reforçada (+2 CA)</option><option value="4">Armadura leve (+4 CA)</option><option value="7">Armadura média (+7 CA)</option><option value="10">Armadura pesada (+10 CA)</option></select></div>
+<div><label class="form-label">Escudo</label><select class="ether-input" id="shieldSelect"><option value="0">Sem escudo</option><option value="2">Escudo leve (+2 CA)</option><option value="4">Escudo médio (+4 CA)</option><option value="6">Escudo pesado (+6 CA)</option></select></div>
+<div><label class="form-label">Bônus de arma / acerto</label><input class="ether-input" id="weaponHitBonus" min="0" type="number" value="0"/></div>
+<div><label class="form-label">Bônus de dano da arma</label><input class="ether-input" id="weaponDamageBonus" min="0" type="number" value="0"/></div>
+</div>
+<div style="margin-top:.85rem"><label class="form-label">Talentos disponíveis para a classe</label><div id="talentOptions" class="talent-check-grid"></div><p class="sheet-muted">Os talentos aparecem por grupo da classe escolhida, talentos livres e talentos especiais do sistema. Esta lista será ampliada conforme o compêndio for migrado para banco de dados.</p></div>
+</div>
 <button class="btn-primary" id="buildCharacter" style="margin-top:1.2rem" type="button">Gerar ficha rápida</button>
 <button class="btn-secondary requires-auth" id="saveCharacterBtn" style="margin-top:.75rem;width:100%" type="button">Salvar Personagem</button>
 <p class="sheet-muted requires-auth" id="saveCharacterMsg" style="margin-top:.7rem"></p>
@@ -124,6 +147,65 @@ function getCharacterPayload(){
 }
 
 document.getElementById('buildCharacter').addEventListener('click',renderSheet); fillRaces();
+</script><script>
+(function(){
+  const ALL_CLASSES = ["Arqueiro","Bárbaro","Bardo","Bruxo","Clérigo","Feiticeiro","Guerreiro","Ladino","Mago","Monge","Paladino"];
+  const ALL_SPECIALIZATIONS = ["Algoz","Andarilho","Assassino","Arqueomante","Asceta Sombrio","Caçador","Campeão","Dobrador","Executor","Gladiador","Gladiador Mágico","Ilusionista","Levita","Necromante","Oráculo","Sentinela","Templário","Xamã"];
+  const SPECIALIZATIONS_BY_CLASS = {
+    "Arqueiro":["Caçador","Arqueomante","Sentinela","Andarilho","Assassino"],
+    "Bárbaro":["Campeão","Gladiador","Executor","Algoz","Sentinela"],
+    "Bardo":["Ilusionista","Oráculo","Levita","Xamã","Andarilho"],
+    "Bruxo":["Necromante","Algoz","Asceta Sombrio","Ilusionista","Xamã"],
+    "Clérigo":["Oráculo","Templário","Xamã","Levita","Sentinela"],
+    "Feiticeiro":["Dobrador","Gladiador Mágico","Ilusionista","Arqueomante","Necromante"],
+    "Guerreiro":["Campeão","Gladiador","Executor","Sentinela","Templário"],
+    "Ladino":["Assassino","Caçador","Executor","Andarilho","Ilusionista"],
+    "Mago":["Arqueomante","Ilusionista","Necromante","Dobrador","Oráculo"],
+    "Monge":["Asceta Sombrio","Dobrador","Executor","Levita","Campeão"],
+    "Paladino":["Templário","Campeão","Sentinela","Gladiador Mágico","Oráculo"]
+  };
+  const RANK_POINTS = {D:{xp:0,pt:0},C:{xp:318,pt:636},B:{xp:726,pt:1452},A:{xp:1621,pt:3242},S:{xp:2761,pt:5522},SSS:{xp:4336,pt:8672}};
+  const ATTRS=["Vigor","Força","Destreza","Inteligência","Sabedoria","Carisma"];
+  const FOCOS=["Mentalismo","Místico","Domínio","Encantamento","Fortaleza"];
+  const ESPECIAIS=["Somática","Controle","Recuperação","Raciocínio"];
+  function slug(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ç/g,"c").replace(/[^a-zA-Z0-9]/g,"").toLowerCase();}
+  function fillPointGrid(id, list, prefix){ const box=document.getElementById(id); if(!box) return; box.innerHTML=list.map(n=>`<div><label>${n}</label><input class="ether-input" data-point-group="${prefix}" data-point-name="${n}" id="${prefix}_${slug(n)}" min="0" type="number" value="0"></div>`).join(""); }
+  function pointObject(prefix){ const out={}; document.querySelectorAll(`[data-point-group="${prefix}"]`).forEach(i=>out[i.dataset.pointName]=Number(i.value)||0); return out; }
+  const TALENTS = {
+    "Livres":["Elementalista I","Elementalista II","Reflexos Aprimorados","Espírito Veloz","Proteção Estratégica","Honra Inabalável"],
+    "Arqueiro":["Mira Precisa","Disparo Rápido","Olhos do Caçador","Flecha Perfurante"],
+    "Bárbaro":["Fúria Brutal","Impacto Implacável","Resistência Selvagem","Golpe Ascendente"],
+    "Bardo":["Melodia Libertadora","Coro da Vitória","Inspiração Heroica","Voz Encantadora"],
+    "Bruxo":["Pacto Sombrio","Maldição Persistente","Selo Profano","Vínculo Oculto"],
+    "Clérigo":["Motivação Divina","Expurgo Divino","Luz Guia","Fluxo Curativo"],
+    "Feiticeiro":["Magia Rápida","Origem Desperta","Controle Arcano","Surto Elemental"],
+    "Guerreiro":["Artes do Combate","Baluarte","Golpe Provocante","Bravura Incondicional"],
+    "Ladino":["Emboscada Mortal","Ação Ardilosa","Execução Silenciosa","Fuga Ágil"],
+    "Mago":["Conjuração Rápida","Especialista Arcano","Memória Mística","Círculo de Poder"],
+    "Monge":["Punho do Julgamento","Corpo Perfeito","Passos do Vento","Disciplina Interior"],
+    "Paladino":["Lâmina dos Deuses","Aura Divina","Golpe de Honra","Juramento Inabalável"],
+    "Incomuns / Raros / Lendários":["Talento Incomum","Talento Raro","Talento Lendário","Talento Único do Mestre"]
+  };
+  function fillSubclass(){ const sel=document.getElementById('subclassSelect'); if(sel) sel.innerHTML='<option value="">Nenhuma</option>'+ALL_CLASSES.map(c=>`<option>${c}</option>`).join(''); }
+  function fillSpecFull(){ const sel=document.getElementById('specializationSelect'); if(!sel) return; const base=document.getElementById('classSelect')?.value; const arr=SPECIALIZATIONS_BY_CLASS[base]||ALL_SPECIALIZATIONS; sel.innerHTML='<option value="">Nenhuma</option>'+arr.map(x=>`<option>${x}</option>`).join(''); }
+  function fillTalents(){ const box=document.getElementById('talentOptions'); if(!box) return; const cls=document.getElementById('classSelect')?.value || ''; const list=[...(TALENTS.Livres||[]), ...(TALENTS[cls]||[]), ...(TALENTS['Incomuns / Raros / Lendários']||[])]; box.innerHTML=list.map(t=>`<label><input type="checkbox" value="${t}"> ${t}</label>`).join(''); }
+  function vitText2(v){ if(!v) return {vida:0,mana:0,energia:0}; return v; }
+  function selectedTalents(){ return [...document.querySelectorAll('#talentOptions input:checked')].map(i=>i.value); }
+  function simulationPayload(){
+    const race=document.getElementById('raceSelect')?.value; const cls=document.getElementById('classSelect')?.value; const rb=(typeof raceBase!=='undefined'?raceBase[race]:{})||{}; const cd=(typeof classData!=='undefined'?classData[cls]:{})||{};
+    const base= {vida:(rb.vit?.vida||0)+(cd.vit?.vida||0), mana:(rb.vit?.mana||0)+(cd.vit?.mana||0), energia:(rb.vit?.energia||0)+(cd.vit?.energia||0)};
+    const dist={vida:Number(document.getElementById('distVida')?.value)||0, mana:Number(document.getElementById('distMana')?.value)||0, energia:Number(document.getElementById('distEnergia')?.value)||0, regeneracao:Number(document.getElementById('distRegeneracao')?.value)||0};
+    const nivel=Math.max(1, Number(document.getElementById('characterLevel')?.value)||1); const rank=document.getElementById('rankSelect')?.value || 'D'; const rp=RANK_POINTS[rank]||RANK_POINTS.D;
+    const armor=Number(document.getElementById('armorSelect')?.value)||0, shield=Number(document.getElementById('shieldSelect')?.value)||0, hit=Number(document.getElementById('weaponHitBonus')?.value)||0, dmg=Number(document.getElementById('weaponDamageBonus')?.value)||0;
+    const levelBonus = Math.max(0,nivel-1); // marcador para simulação; será refinado quando os talentos de vitalidade forem cadastrados integralmente.
+    return {rank, nivel, xpDisponivel:rp.xp, ptDisponivel:rp.pt, pontosAtuais:{atributos:pointObject("attr"), focos:pointObject("foco"), especiais:pointObject("especial"), regeneracao:dist.regeneracao}, vitalidadesIniciais:base, distribuicao:dist, vitalidadesSimuladas:{vida:base.vida+dist.vida+levelBonus, mana:base.mana+dist.mana+levelBonus, energia:base.energia+dist.energia+levelBonus, regeneracao:dist.regeneracao}, equipamentos:{bonusCA:armor+shield, bonusAcerto:hit, bonusDano:dmg}, combate:{caSimulada:10+armor+shield, acertoSimulado:hit, danoBonus:dmg}, talentos:selectedTalents()};
+  }
+  function appendSimulation(){ const sheet=document.getElementById('quickSheet'); if(!sheet) return; const sim=simulationPayload(); const html=`<div class="sim-box"><h4>Simulação Premium</h4><ul><li>Ranque: ${sim.rank} — XP ${sim.xpDisponivel} / PT ${sim.ptDisponivel}</li><li>Nível simulado: ${sim.nivel}</li><li>Vitalidades simuladas: ${sim.vitalidadesSimuladas.vida} vida, ${sim.vitalidadesSimuladas.mana} mana, ${sim.vitalidadesSimuladas.energia} energia, ${sim.vitalidadesSimuladas.regeneracao} regeneração</li><li>CA simulada: ${sim.combate.caSimulada}</li><li>Acerto bônus por equipamento: +${sim.combate.acertoSimulado}</li><li>Dano bônus por equipamento: +${sim.combate.danoBonus}</li><li>Talentos escolhidos: ${sim.talentos.length?sim.talentos.join(', '):'nenhum'}</li></ul></div>`; sheet.insertAdjacentHTML('beforeend',html); }
+  const oldRender=window.renderSheet || renderSheet; window.renderSheet=function(){ oldRender(); appendSimulation(); };
+  const oldPayload=window.getCharacterPayload || getCharacterPayload; window.getCharacterPayload=function(){ const p=oldPayload(); p.subclasse=document.getElementById('subclassSelect')?.value || ''; p.rankInicial=document.getElementById('rankSelect')?.value || 'D'; p.talentos=selectedTalents(); p.simulacao=simulationPayload(); p.distribuicaoInicial=simulationPayload().distribuicao; p.equipamentosSimulados=simulationPayload().equipamentos; return p; };
+  function init(){ fillPointGrid("attrPointGrid", ATTRS, "attr"); fillPointGrid("focusPointGrid", FOCOS, "foco"); fillPointGrid("specialPointGrid", ESPECIAIS, "especial"); fillSubclass(); fillSpecFull(); fillTalents(); ['classSelect','rankSelect','characterLevel','distVida','distMana','distEnergia','distRegeneracao','armorSelect','shieldSelect','weaponHitBonus','weaponDamageBonus'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{fillSpecFull(); fillTalents(); window.renderSheet();}); if(el&&el.tagName==='INPUT') el.addEventListener('input',window.renderSheet);}); window.renderSheet(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
 </script><script type="module">
 import { watchAuth, saveCharacter, hasApprovedAccess } from './auth-service.js';
 let currentProfile = null;
