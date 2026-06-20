@@ -25,7 +25,8 @@ import {
   query,
   orderBy,
   where,
-  limit
+  limit,
+  deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js";
 
@@ -68,5 +69,6 @@ export {
   query,
   orderBy,
   where,
-  limit
+  limit,
+  deleteField
 };

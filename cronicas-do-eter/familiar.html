@@ -26,11 +26,14 @@
   <a href="especializacoes.html">Especializações</a>
   <a href="talentos.html">Talentos</a>
   <a href="crie-personagem.html">Crie seu Personagem</a>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
   <a href="habilidades.html">Habilidades</a>
   <a class="active" href="familiar.html">Familiar</a>
+  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <a href="divindades.html">Divindades</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a>
+  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
   <a class="requires-auth" href="mercado.html">Mercado</a>
   <a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside><div id="stars"></div>
@@ -53,7 +56,7 @@
 <div class="form-row"><label for="famElement">Natureza / Elemento</label><select id="famElement"></select></div>
 <div class="form-row"><label for="famRank">Ranque</label><select id="famRank"><option>B</option><option>A</option><option>S</option></select></div>
 <div class="form-row"><label for="famFlavor">Traço narrativo</label><textarea id="famFlavor" placeholder="Descreva aparência, comportamento, vínculo com o mestre ou tema das habilidades." rows="4"></textarea></div>
-<div class="button-row"><button class="btn-primary" id="buildFam">Montar Familiar</button><button class="btn-secondary" id="generateFamSkill" type="button">Gerar Habilidade</button></div>
+<div class="button-row"><button class="btn-primary" id="buildFam">Montar Familiar</button><button class="btn-secondary" id="generateFamSkill" type="button">Gerar Habilidade</button><button class="btn-secondary requires-auth" id="saveFamiliarBtn" type="button">Salvar Familiar</button></div><p class="familiar-note requires-auth" id="saveFamiliarMsg"></p>
 </div>
 <div class="result-card" id="famResult"></div>
 </div>
@@ -174,5 +177,33 @@ document.addEventListener('input',function(e){if(e.target.matches('#famName,#fam
 document.getElementById('buildFam').addEventListener('click',renderFam);
 document.getElementById('generateFamSkill').addEventListener('click',generateFamSkill);
 fillFam();
-</script><script src="script.js"></script><script type="module" src="auth-widget.js"></script>
+</script><script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module">
+import { watchAuth, saveFamiliar, hasApprovedAccess } from './auth-service.js';
+let currentProfile = null;
+watchAuth(({ profile }) => { currentProfile = profile; });
+const btn = document.getElementById('saveFamiliarBtn');
+const msg = document.getElementById('saveFamiliarMsg');
+if (btn) {
+  btn.addEventListener('click', async () => {
+    try {
+      if (!hasApprovedAccess(currentProfile) || currentProfile.premium !== true) throw new Error('Você precisa estar logado como usuário premium para salvar familiares.');
+      const payload = {
+        nome: document.getElementById('famName')?.value || 'Familiar sem nome',
+        especie: document.getElementById('famRace')?.value || '',
+        funcao: document.getElementById('famType')?.value || '',
+        elemento: document.getElementById('famElement')?.value || '',
+        ranque: document.getElementById('famRank')?.value || '',
+        natureza: document.getElementById('famNature')?.value || '',
+        danoPrincipal: document.getElementById('famDamagePrimary')?.value || '',
+        danoSecundario: document.getElementById('famDamageSecondary')?.value || '',
+        habilidadeGeradaHTML: document.getElementById('generatedSkill')?.innerHTML || ''
+      };
+      const id = await saveFamiliar(payload);
+      msg.textContent = 'Familiar salvo com sucesso. ID: ' + id;
+    } catch (err) {
+      msg.textContent = err.message || 'Erro ao salvar familiar.';
+    }
+  });
+}
+</script>
 </body></html>

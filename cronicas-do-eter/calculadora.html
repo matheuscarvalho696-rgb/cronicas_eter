@@ -67,8 +67,10 @@
   <a href="especializacoes.html">Especializações</a>
   <a href="talentos.html">Talentos</a>
   <a href="crie-personagem.html">Crie seu Personagem</a>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
   <a href="habilidades.html">Habilidades</a>
   <a href="familiar.html">Familiar</a>
+  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <a href="divindades.html">Divindades</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="active requires-auth" href="calculadora.html">Calculadora XP/PT</a>
@@ -685,7 +687,9 @@ function validateAndExport(){
   if((Number(document.getElementById('xpLeft').textContent.replace(/\./g,'').replace(',','.'))||0) < 0) problems.push('XP gasto acima do XP disponível.');
   if((Number(document.getElementById('ptLeft').textContent.replace(/\./g,'').replace(',','.'))||0) < 0) problems.push('PT gasto acima do PT disponível.');
   if(problems.length && !confirm('A validação encontrou avisos:\n- ' + [...new Set(problems)].join('\n- ') + '\n\nDeseja exportar mesmo assim?')) return;
-  openDistributionPage(buildDistributionLines());
+  const distributionLines = buildDistributionLines();
+  openDistributionPage(distributionLines);
+  window.dispatchEvent(new CustomEvent('cronicas:distributionValidated', { detail: { lines: distributionLines } }));
 }
 
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
@@ -698,6 +702,27 @@ document.getElementById('resetBtn').addEventListener('click',()=>{ document.quer
 render();
 </script>
 <script type="module" src="auth-widget.js"></script>
-<script type="module" src="auth-guard.js"></script>
+<script type="module" src="auth-guard.js"></script><script type="module">
+import { watchAuth, saveDistribution, hasApprovedAccess } from './auth-service.js';
+let currentProfile = null;
+watchAuth(({ profile }) => { currentProfile = profile; });
+window.addEventListener('cronicas:distributionValidated', async (event) => {
+  try {
+    if (!hasApprovedAccess(currentProfile) || currentProfile.premium !== true) return;
+    const xpSpent = Number((document.getElementById('xpSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
+    const ptSpent = Number((document.getElementById('ptSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
+    await saveDistribution({
+      title: 'Distribuição XP/PT - ' + new Date().toLocaleString('pt-BR'),
+      xpSpent,
+      ptSpent,
+      xpLeft: document.getElementById('xpLeft')?.textContent || '0',
+      ptLeft: document.getElementById('ptLeft')?.textContent || '0',
+      lines: event.detail?.lines || []
+    });
+  } catch (err) {
+    console.warn('Não foi possível salvar a distribuição:', err);
+  }
+});
+</script>
 </body>
 </html>

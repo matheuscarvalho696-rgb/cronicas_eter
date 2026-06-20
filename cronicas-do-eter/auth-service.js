@@ -377,3 +377,135 @@ export function makeInviteCode(){
   for (let i = 0; i < 8; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
   return code;
 }
+
+
+// ========================================================
+// PERSONAGENS, DISTRIBUIÇÕES E FAMILIARES SALVOS
+// ========================================================
+function requireCurrentUser() {
+  const { auth } = getFirebase();
+  if (!auth.currentUser) throw new Error("Você precisa estar logado para salvar.");
+  return auth.currentUser;
+}
+
+function cleanText(value, fallback = "") {
+  return String(value || fallback).trim();
+}
+
+export async function saveCharacter(character) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const payload = {
+    ownerUid: user.uid,
+    ownerEmail: normalizeEmail(user.email || ""),
+    nome: cleanText(character.nome, "Personagem sem nome"),
+    raca: cleanText(character.raca),
+    variante: cleanText(character.variante),
+    classe: cleanText(character.classe),
+    subclasse: cleanText(character.subclasse),
+    especializacao: cleanText(character.especializacao),
+    elementoNatural: cleanText(character.elementoNatural),
+    resumo: character.resumo || {},
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, "characters"), payload);
+  await updateDoc(doc(db, "users", user.uid), {
+    "character.hasCharacter": true,
+    "character.nome": payload.nome,
+    "character.raca": payload.raca,
+    "character.variante": payload.variante,
+    "character.classe": payload.classe,
+    "character.especializacao": payload.especializacao,
+    "character.elementoNatural": payload.elementoNatural,
+    updatedAt: serverTimestamp()
+  }).catch(()=>{});
+  await createLog("character.created", { characterId: ref.id, nome: payload.nome });
+  return ref.id;
+}
+
+export async function listMyCharacters() {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const q = query(collection(db, "characters"), where("ownerUid", "==", user.uid));
+  const snap = await getDocs(q);
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
+
+export async function saveDistribution(distribution) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const payload = {
+    ownerUid: user.uid,
+    ownerEmail: normalizeEmail(user.email || ""),
+    title: cleanText(distribution.title, "Distribuição XP/PT"),
+    xpSpent: Number(distribution.xpSpent || 0),
+    ptSpent: Number(distribution.ptSpent || 0),
+    xpLeft: cleanText(distribution.xpLeft),
+    ptLeft: cleanText(distribution.ptLeft),
+    lines: Array.isArray(distribution.lines) ? distribution.lines : [],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, "distributions"), payload);
+  await updateDoc(doc(db, "users", user.uid), {
+    "calculator.lastValidation": serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }).catch(()=>{});
+  await createLog("distribution.saved", { distributionId: ref.id, xpSpent: payload.xpSpent, ptSpent: payload.ptSpent });
+  return ref.id;
+}
+
+export async function listMyDistributions() {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const q = query(collection(db, "distributions"), where("ownerUid", "==", user.uid));
+  const snap = await getDocs(q);
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
+
+export async function saveFamiliar(familiar) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const payload = {
+    ownerUid: user.uid,
+    ownerEmail: normalizeEmail(user.email || ""),
+    nome: cleanText(familiar.nome, "Familiar sem nome"),
+    especie: cleanText(familiar.especie),
+    funcao: cleanText(familiar.funcao),
+    elemento: cleanText(familiar.elemento),
+    ranque: cleanText(familiar.ranque, "B"),
+    natureza: cleanText(familiar.natureza),
+    danoPrincipal: cleanText(familiar.danoPrincipal),
+    danoSecundario: cleanText(familiar.danoSecundario),
+    habilidadeGeradaHTML: cleanText(familiar.habilidadeGeradaHTML),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, "familiars"), payload);
+  await updateDoc(doc(db, "users", user.uid), {
+    "familiar.hasFamiliar": true,
+    "familiar.nome": payload.nome,
+    "familiar.raca": payload.especie,
+    "familiar.tipo": payload.funcao,
+    "familiar.elemento": payload.elemento,
+    "familiar.ranque": payload.ranque,
+    updatedAt: serverTimestamp()
+  }).catch(()=>{});
+  await createLog("familiar.saved", { familiarId: ref.id, nome: payload.nome });
+  return ref.id;
+}
+
+export async function listMyFamiliars() {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const q = query(collection(db, "familiars"), where("ownerUid", "==", user.uid));
+  const snap = await getDocs(q);
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
