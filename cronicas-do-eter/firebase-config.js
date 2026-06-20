@@ -1,18 +1,15 @@
 // ========================================================
 // CRÔNICAS DO ÉTER — CONFIGURAÇÃO FIREBASE
 // ========================================================
-// Cole aqui o firebaseConfig gerado em:
-// Firebase Console > Configurações do Projeto > Geral > Seus apps > Web.
-//
-// IMPORTANTE: depois de preencher, faça git push para a Vercel publicar.
 
 export const firebaseConfig = {
-  apiKey: "COLE_SUA_API_KEY_AQUI",
-  authDomain: "COLE_SEU_AUTH_DOMAIN_AQUI",
-  projectId: "COLE_SEU_PROJECT_ID_AQUI",
-  storageBucket: "COLE_SEU_STORAGE_BUCKET_AQUI",
-  messagingSenderId: "COLE_SEU_MESSAGING_SENDER_ID_AQUI",
-  appId: "COLE_SEU_APP_ID_AQUI"
+  apiKey: "AIzaSyAY-AbYJZQ0HKyQLkeggFQJCOZV_wzBNZc",
+  authDomain: "cronicas-do-eter.firebaseapp.com",
+  projectId: "cronicas-do-eter",
+  storageBucket: "cronicas-do-eter.firebasestorage.app",
+  messagingSenderId: "348712885356",
+  appId: "1:348712885356:web:94fb7329b6fd9e38bf8c49",
+  measurementId: "G-2HBB7932QQ"
 };
 
 export function isFirebaseConfigured() {
