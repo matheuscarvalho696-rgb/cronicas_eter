@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Crônicas do Éter — Sistema de RPG</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&amp;family=Cinzel:wght@400;600;700&amp;family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&amp;display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+<style>
+  /* Page-specific styling (home only) */
+  #hero {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    overflow: hidden;
+  }
+  .hero-ether-ring {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    border: 1px solid rgba(155,111,212,0.18);
+    box-shadow: 0 0 80px rgba(155,111,212,0.10), inset 0 0 80px rgba(100,70,160,0.08);
+    animation: pulse-ring 6s ease-in-out infinite;
+  }
+  .hero-ether-ring:nth-child(2) {
+    width: 820px; height: 820px;
+    border-color: rgba(185,143,232,0.10);
+    animation-delay: 2s; animation-duration: 8s;
+  }
+  .hero-ether-ring:nth-child(3) {
+    width: 1100px; height: 1100px;
+    border-color: rgba(155,111,212,0.06);
+    animation-delay: 4s; animation-duration: 10s;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.03); opacity: 0.6; }
+  }
+  .hero-eyebrow {
+    font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.3em;
+    text-transform: uppercase; color: var(--ether-gold); margin-bottom: 1.5rem;
+    position: relative; z-index: 2;
+  }
+  .hero-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(2.8rem, 8vw, 6.5rem);
+    font-weight: 900; line-height: 1;
+    background: linear-gradient(160deg, var(--silver-bright) 0%, var(--ether-glow) 45%, #7a3fcf 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 0.2em; position: relative; z-index: 2;
+    filter: drop-shadow(0 0 40px rgba(155,111,212,0.4));
+  }
+  .hero-subtitle {
+    font-family: 'Cinzel', serif; font-size: clamp(0.8rem, 2vw, 1rem); letter-spacing: 0.4em;
+    text-transform: uppercase; color: var(--rune-bright); margin-bottom: 2.5rem;
+    position: relative; z-index: 2;
+  }
+  .hero-quote {
+    font-style: italic; font-size: 1.2rem; color: var(--mist); max-width: 600px; line-height: 1.8;
+    position: relative; z-index: 2; margin-bottom: 3.5rem;
+  }
+  .hero-quote em { color: var(--ether-pale); font-style: normal; }
+
+  #sobre { background: linear-gradient(180deg, var(--void) 0%, var(--abyss) 100%); }
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; margin-top: 3rem; }
+  .about-text p { color: var(--text); margin-bottom: 1.2rem; font-size: 1.1rem; }
+  .about-text p strong { color: var(--ether-glow); font-weight: 600; }
+  .pillars { display: flex; flex-direction: column; gap: 1.5rem; }
+  .pillar { border-left: 2px solid var(--ether-gold); padding: 1rem 1.5rem; background: rgba(155,111,212,0.04); }
+  .pillar-title { font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.1em; color: var(--ether-glow); text-transform: uppercase; margin-bottom: 0.4rem; }
+  .pillar p { color: var(--mist); font-size: 1rem; line-height: 1.6; }
+
+  #mecanicas { background: var(--deep); }
+  .mech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3rem; }
+  .mech-card {
+    background: var(--surface); border: 1px solid var(--border); padding: 2rem 1.5rem;
+    position: relative; transition: border-color 0.3s, transform 0.2s; overflow: hidden;
+  }
+  .mech-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ether-glow), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .mech-card:hover { border-color: rgba(155,111,212,0.55); transform: translateY(-2px); }
+  .mech-card:hover::before { opacity: 1; }
+  .mech-icon { font-size: 2rem; margin-bottom: 1rem; display: block; }
+  .mech-name { font-family: 'Cinzel', serif; font-size: 0.9rem; letter-spacing: 0.08em; color: var(--ether-glow); text-transform: uppercase; margin-bottom: 0.7rem; }
+  .mech-desc { color: var(--mist); font-size: 0.95rem; line-height: 1.6; }
+
+  #racas-preview { background: linear-gradient(180deg, var(--deep) 0%, var(--abyss) 100%); }
+  #classes-preview { background: var(--abyss); }
+  .classes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top: 3rem; }
+  .class-card {
+    border: 1px solid rgba(155,111,212,0.22); padding: 1.2rem 1rem; text-align: center;
+    background: rgba(10,9,16,0.6); transition: border-color 0.3s, background 0.3s;
+  }
+  .class-card:hover { border-color: var(--ether-glow); background: rgba(155,111,212,0.08); }
+  .class-icon { font-size: 1.8rem; display: block; margin-bottom: 0.5rem; }
+  .class-name { font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rune-bright); display: block; margin-bottom: 0.3rem; }
+  .class-role { font-size: 0.85rem; color: var(--text-dim); font-style: italic; }
+
+  #ferramentas {
+    background: radial-gradient(ellipse at center, rgba(155,111,212,0.10) 0%, transparent 70%), var(--void);
+  }
+  .tool-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2.5rem; text-align: center; max-width: 500px; margin: 2rem auto 0;
+  }
+  .tool-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+  .tool-card h3 { font-family: 'Cinzel Decorative', serif; font-size: 1.5rem; color: var(--ether-pale); margin-bottom: 0.8rem; }
+  .tool-card p { color: var(--mist); margin-bottom: 1.5rem; }
+
+  #cta-final { background: radial-gradient(ellipse at center, rgba(155,111,212,0.10) 0%, transparent 70%), var(--void); text-align: center; padding: 5rem 2rem; }
+  .cta-title { font-family: 'Cinzel Decorative', serif; font-size: clamp(2rem, 5vw, 4rem); color: var(--ether-pale); margin-bottom: 1rem; }
+  .cta-sub { color: var(--mist); font-size: 1.15rem; margin-bottom: 3rem; max-width: 500px; margin-left: auto; margin-right: auto; }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2rem; margin-top: 1rem; text-align: center; }
+  .stat-num { font-family: 'Cinzel Decorative', serif; font-size: 2rem; color: var(--ether-glow); }
+  .stat-label { font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--silver-dim); }
+
+  @media (max-width: 768px) {
+    .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .mech-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) { .mech-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body><nav class="topbar">
+<a class="nav-brand" href="index.html">Crônicas do Éter</a>
+<a class="top-xp-link" href="calculadora.html">Calculadora XP/PT</a>
+<button aria-label="Abrir menu" class="nav-toggle">☰</button>
+</nav>
+<aside aria-label="Menu lateral" class="sidebar">
+<div class="sidebar-title">Compêndio</div>
+<a class="active" href="index.html">Início</a>
+<a href="racas.html">Raças</a>
+<a href="classes.html">Classes</a>
+<a href="especializacoes.html">Especializações</a>
+<a href="talentos.html">Talentos</a>
+<a href="crie-personagem.html">Crie seu Personagem</a>
+<a href="habilidades.html">Habilidades</a>
+<a href="familiar.html">Familiar</a>
+<a href="divindades.html">Divindades</a>
+<a href="mercado.html">Mercado</a>
+<a href="criacao-equipamentos.html">Criação de Equipamentos</a>
+</aside>
+
+<div id="stars"></div>
+<section id="hero">
+<div class="hero-ether-ring"></div>
+<div class="hero-ether-ring"></div>
+<div class="hero-ether-ring"></div>
+<p class="hero-eyebrow">Sistema de RPG de Mesa</p>
+<h1 class="hero-title">Crônicas<br/>do Éter</h1>
+<p class="hero-subtitle">Entre o Abismo e a Luz</p>
+<p class="hero-quote">
+<em>Há um abismo entre as trevas e a luz, e desse abismo brotam horrores inomináveis,<br/>
+    entre flagelos e almas, grandes heróis se erguem...</em>
+</p>
+<div class="cta-group">
+<a class="btn-primary" href="#sobre">Explorar o Sistema</a>
+<a class="btn-secondary" href="calculadora.html">⚙ Calculadora XP/PT</a>
+</div>
+</section>
+<section id="sobre">
+<div class="container">
+<div class="about-grid reveal">
+<div class="about-text">
+<p class="section-label">Capítulo I</p>
+<h2 class="section-title">O que é Crônicas do Éter?</h2>
+<p>Crônicas do Éter nasce do espírito que define o RPG de mesa: permitir que você viva aventuras únicas em um universo próprio, cheio de mistérios, perigos e possibilidades.</p>
+<p>Este livro não é apenas um conjunto de regras — é um guia que <strong>transforma imaginação em realidade dentro da mesa</strong>. Uma ponte entre o Mestre que constrói mundos e os jogadores que os habitam.</p>
+<p>No RPG, <strong>o único limite é o que vocês conseguem imaginar</strong>. Uma porta pode ser arrombada ou negociada. Um dragão pode ser enfrentado ou persuadido. Um vilão pode se tornar um aliado inesperado. Todas as decisões moldam a história.</p>
+<p><em>O Éter te aguarda.</em></p>
+</div>
+<div class="pillars">
+<div class="pillar">
+<p class="pillar-title">⚔️ O Papel do Mestre</p>
+<p>O Mestre é narrador e árbitro — descreve o cenário, controla NPCs, apresenta desafios e garante que as regras sejam aplicadas com justiça. Ele não é inimigo dos jogadores, mas o arquiteto do mundo.</p>
+</div>
+<div class="pillar">
+<p class="pillar-title">🎭 O Papel dos Jogadores</p>
+<p>Os jogadores são os protagonistas. Cada um interpreta um personagem, descrevendo suas ações, decisões e pensamentos, trabalhando em grupo para que a história avance com ritmo e diversão.</p>
+</div>
+<div class="pillar">
+<p class="pillar-title">🎲 A Alma do Sistema</p>
+<p>RPG não é sobre regras, mas sobre histórias. As regras existem para ajudar a contar essas histórias de forma clara, divertida e equilibrada. O d20 é a peça central de cada decisão.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="mecanicas">
+<div class="container">
+<div class="reveal">
+<p class="section-label">Fundamentos</p>
+<h2 class="section-title">Mecânicas do Sistema</h2>
+<p class="section-intro">Um sistema robusto onde cada rodada representa 6 segundos de combate simultâneo, com ações cuidadosamente planejadas e resultados imprevisíveis.</p>
+</div>
+<div class="mech-grid reveal">
+<div class="mech-card">
+<span class="mech-icon">🎲</span>
+<p class="mech-name">O d20 Central</p>
+<p class="mech-desc">O dado de 20 lados resolve todas as ações. Role 20 natural para um Sucesso Crítico devastador, ou sofra as consequências de um 1 natural em uma Falha Crítica épica.</p>
+</div>
+<div class="mech-card">
+<span class="mech-icon">⚡</span>
+<p class="mech-name">Vantagem &amp; Desvantagem</p>
+<p class="mech-desc">Circunstâncias favoráveis concedem Vantagem — role 2d20, use o maior. Em desvantagem, use o menor. Elas se anulam quando combinadas.</p>
+</div>
+<div class="mech-card">
+<span class="mech-icon">⏱️</span>
+<p class="mech-name">A Rodada</p>
+<p class="mech-desc">Cada rodada representa 6 segundos simultâneos. A ordem de turnos é definida por Iniciativa, e os efeitos se contam sempre que o primeiro personagem age novamente.</p>
+</div>
+<div class="mech-card">
+<span class="mech-icon">🗡️</span>
+<p class="mech-name">Tipos de Ação</p>
+<p class="mech-desc">Ação Padrão, Ação Bônus, Ação Livre, Ação de Movimento e Reação. Cada turno é uma coreografia estratégica com até 3 ações padrão em níveis avançados.</p>
+</div>
+<div class="mech-card">
+<span class="mech-icon">🛡️</span>
+<p class="mech-name">Classe de Armadura</p>
+<p class="mech-desc">A CA define a resistência do personagem. Fortitude resiste a golpes físicos, Reflexos esquivam de ataques rápidos. Supere a CA inimiga para acertar.</p>
+</div>
+<div class="mech-card">
+<span class="mech-icon">✨</span>
+<p class="mech-name">Efeitos de Combate</p>
+<p class="mech-desc">Dezenas de efeitos positivos e negativos moldam o campo de batalha — de Velocidade Superior a Paralisia, cada habilidade abre novas dimensões táticas.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="racas-preview">
+<div class="container">
+<div class="reveal">
+<p class="section-label">As Raças</p>
+<h2 class="section-title">Quem você será?</h2>
+<p class="section-intro">12 raças habitam o universo de Crônicas do Éter, cada uma com história, variantes e poderes únicos. Clique em uma raça para conhecer sua lore completa.</p>
+</div>
+<div class="card-grid reveal">
+<a class="race-link-card" href="racas/anao.html">
+<span class="race-glyph">⛰️</span>
+<span class="race-link-name">Anão</span>
+<p class="race-link-flavor">Filhos da montanha, mestres da forja.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/argoniano.html">
+<span class="race-glyph">🦎</span>
+<span class="race-link-name">Argoniano</span>
+<p class="race-link-flavor">Reptilianos dos pântanos e marés.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/celestial.html">
+<span class="race-glyph">✨</span>
+<span class="race-link-name">Celestial</span>
+<p class="race-link-flavor">Emissários divinos de luz e ordem.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/daedra.html">
+<span class="race-glyph">🔥</span>
+<span class="race-link-name">Daedra</span>
+<p class="race-link-flavor">Hierarquia brutal nascida da chama primordial.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/demonio.html">
+<span class="race-glyph">😈</span>
+<span class="race-link-name">Demônio</span>
+<p class="race-link-flavor">Criaturas do caos e da corrupção.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/draconato.html">
+<span class="race-glyph">🐉</span>
+<span class="race-link-name">Draconato</span>
+<p class="race-link-flavor">Descendentes dos dragões antigos.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/elfo.html">
+<span class="race-glyph">🌿</span>
+<span class="race-link-name">Elfo</span>
+<p class="race-link-flavor">Mestres da magia e da elegância.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/humano.html">
+<span class="race-glyph">🧑</span>
+<span class="race-link-name">Humano</span>
+<p class="race-link-flavor">Versáteis e ambiciosos.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/mestico.html">
+<span class="race-glyph">🌀</span>
+<span class="race-link-name">Mestiço</span>
+<p class="race-link-flavor">Heranças combinadas de duas raças.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/orc.html">
+<span class="race-glyph">⚔️</span>
+<span class="race-link-name">Orc</span>
+<p class="race-link-flavor">Força bruta e honra de clã.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/sylvan.html">
+<span class="race-glyph">🌸</span>
+<span class="race-link-name">Sylvan</span>
+<p class="race-link-flavor">Guardiões com traços de animais.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+<a class="race-link-card" href="racas/quanti.html">
+<span class="race-glyph">🔮</span>
+<span class="race-link-name">Quanti</span>
+<p class="race-link-flavor">A primeira raça, nascida da essência dos Titãs.</p>
+<span class="race-link-cta">Ver raça →</span>
+</a>
+</div>
+<div style="text-align:center; margin-top:2.5rem;">
+<a class="btn-secondary" href="racas.html">Ver Todas as Raças</a>
+</div>
+</div>
+</section>
+<section id="classes-preview">
+<div class="container">
+<div class="reveal">
+<p class="section-label">Classes &amp; Especializações</p>
+<h2 class="section-title">Seu Caminho de Combate</h2>
+<p class="section-intro">11 classes base e 18 especializações. Do guerreiro que domina o campo de batalha ao mago que dobra a realidade — cada classe tem seu estilo único e árvore de talentos. Clique em uma classe para ver sua lore e habilidades completas.</p>
+</div>
+<div class="card-grid reveal">
+<a class="class-link-card" href="classes/arqueiro.html"><span class="class-link-glyph">🏹</span><span class="class-link-name">Arqueiro</span><p class="class-link-role">Precisão à distância</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/barbaro.html"><span class="class-link-glyph">💢</span><span class="class-link-name">Bárbaro</span><p class="class-link-role">Fúria e destruição</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/bardo.html"><span class="class-link-glyph">🎵</span><span class="class-link-name">Bardo</span><p class="class-link-role">Magia e inspiração</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/bruxo.html"><span class="class-link-glyph">🕯️</span><span class="class-link-name">Bruxo</span><p class="class-link-role">Pactos e poder sombrio</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/clerigo.html"><span class="class-link-glyph">⛪</span><span class="class-link-name">Clérigo</span><p class="class-link-role">Fé e poder divino</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/feiticeiro.html"><span class="class-link-glyph">🌟</span><span class="class-link-name">Feiticeiro</span><p class="class-link-role">Magia no sangue</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/guerreiro.html"><span class="class-link-glyph">⚔️</span><span class="class-link-name">Guerreiro</span><p class="class-link-role">Domínio marcial</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/ladino.html"><span class="class-link-glyph">🗡️</span><span class="class-link-name">Ladino</span><p class="class-link-role">Furtividade e astúcia</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/mago.html"><span class="class-link-glyph">📚</span><span class="class-link-name">Mago</span><p class="class-link-role">Conhecimento arcano</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/monge.html"><span class="class-link-glyph">🥋</span><span class="class-link-name">Monge</span><p class="class-link-role">Corpo e mente</p><span class="class-link-cta">Ver classe →</span></a>
+<a class="class-link-card" href="classes/paladino.html"><span class="class-link-glyph">🛡️</span><span class="class-link-name">Paladino</span><p class="class-link-role">Juramento e proteção</p><span class="class-link-cta">Ver classe →</span></a>
+</div>
+<div style="text-align:center; margin-top:2.5rem;">
+<a class="btn-secondary" href="classes.html">Ver Todas as Classes</a>
+</div>
+</div>
+</section>
+<section id="ferramentas">
+<div class="container">
+<div class="reveal" style="text-align:center;">
+<p class="section-label" style="text-align:center;">Ferramentas do Jogador</p>
+<h2 class="section-title">Calculadora de XP e PT</h2>
+<p class="section-intro" style="margin:0 auto;">Distribua os pontos de Experiência e Técnica do seu personagem de forma rápida, com base nas tabelas oficiais do sistema.</p>
+</div>
+<div class="tool-card reveal">
+<span class="tool-icon">⚙️</span>
+<h3>Distribuidor de PT/XP</h3>
+<p>Insira seus pontos disponíveis e distribua entre Atributos, Foco, Acertos, Resistências, Vitalidades e muito mais — com cálculo automático de custo.</p>
+<a class="btn-primary" href="calculadora.html">Abrir Calculadora</a>
+</div>
+</div>
+</section>
+<section id="cta-final">
+<div class="container">
+<div class="reveal">
+<p class="section-label" style="text-align:center;">O Éter te Aguarda</p>
+<h2 class="cta-title">Pronto para a Aventura?</h2>
+<p class="cta-sub">Reúna seu grupo, escolha sua raça e classe, e mergulhe em um universo onde cada decisão molda o destino do mundo.</p>
+<div class="cta-group">
+<a class="btn-primary" href="racas.html">📖 Explorar as Raças</a>
+<a class="btn-secondary" href="calculadora.html">⚙ Calculadora XP/PT</a>
+</div>
+<div class="rune-divider" style="margin-top: 4rem;"><span>✦</span></div>
+<div class="stats-row">
+<div><p class="stat-num">12</p><p class="stat-label">Raças</p></div>
+<div><p class="stat-num">11</p><p class="stat-label">Classes</p></div>
+<div><p class="stat-num">18</p><p class="stat-label">Especializações</p></div>
+<div><p class="stat-num">8</p><p class="stat-label">Escolas de Magia</p></div>
+<div><p class="stat-num">∞</p><p class="stat-label">Aventuras</p></div>
+</div>
+</div>
+</div>
+</section>
+<section id="novas-ferramentas">
+<div class="container">
+<div class="reveal" style="text-align:center;">
+<p class="section-label">Ferramentas e Compêndio</p>
+<h2 class="section-title">Acesse as novas áreas</h2>
+<p class="section-intro" style="margin:0 auto;">Crie personagens, consulte habilidades, talentos, especializações e acompanhe páginas futuras do sistema.</p>
+</div>
+<div class="card-grid reveal">
+<a class="class-link-card" href="crie-personagem.html"><span class="class-link-glyph">🧾</span><span class="class-link-name">Crie seu Personagem</span><p class="class-link-role">Escolha raça, variante e classe para gerar uma ficha rápida.</p><span class="class-link-cta">Abrir →</span></a>
+<a class="class-link-card" href="habilidades.html"><span class="class-link-glyph">✨</span><span class="class-link-name">Habilidades</span><p class="class-link-role">Entenda habilidades livres, exclusivas e perdidas.</p><span class="class-link-cta">Abrir →</span></a>
+<a class="class-link-card" href="especializacoes.html"><span class="class-link-glyph">⚔️</span><span class="class-link-name">Especializações</span><p class="class-link-role">Veja como as combinações de classes funcionam.</p><span class="class-link-cta">Abrir →</span></a>
+<a class="class-link-card" href="talentos.html"><span class="class-link-glyph">🌟</span><span class="class-link-name">Talentos</span><p class="class-link-role">Conheça a lógica dos talentos do sistema.</p><span class="class-link-cta">Abrir →</span></a>
+<a class="class-link-card" href="divindades.html"><span class="class-link-glyph">☀️</span><span class="class-link-name">Divindades</span><p class="class-link-role">Página reservada para o panteão futuro.</p><span class="class-link-cta">Abrir →</span></a>
+</div>
+</div>
+</section>
+<footer>
+<span>Crônicas do Éter</span> — Sistema de RPG de Mesa
+  <div class="footer-links">
+<a href="racas.html">Raças</a>
+<a href="calculadora.html">Calculadora XP/PT</a>
+</div>
+</footer>
+<script src="script.js"></script>
+</body>
+</html>
