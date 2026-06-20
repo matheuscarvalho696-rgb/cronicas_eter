@@ -22,15 +22,18 @@
   <a class="requires-auth" href="mercado.html">Mercado</a>
   <a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside><div id="stars"></div><header class="page-header"><p class="breadcrumb"><a href="index.html">Início</a> / Meus Familiares</p><p class="page-eyebrow">Área Premium</p><h1 class="page-title">Meus Familiares</h1><p class="page-intro">Familiares salvos na sua conta.</p></header><section><div class="container"><div id="familiarsList" class="info-grid reveal"></div></div></section><footer><span>Crônicas do Éter</span> — Plataforma do Jogador</footer><script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script><script type="module">
-import { watchAuth, listMyFamiliars, hasApprovedAccess } from './auth-service.js';
+import { watchAuth, listMyFamiliars, deleteFamiliar, hasApprovedAccess } from './auth-service.js';
 const box=document.getElementById('familiarsList');
+let cachedFamiliars=[];
+async function reloadFamiliars(){ const rows=await listMyFamiliars(); cachedFamiliars=rows; return rows; }
 function fmtDate(v){ try { return v?.toDate ? v.toDate().toLocaleString('pt-BR') : '-'; } catch(e){ return '-'; } }
 watchAuth(async ({profile})=>{
  if(!hasApprovedAccess(profile) || profile.premium!==true){ box.innerHTML='<div class="info-card"><h4>Acesso restrito</h4><p>Entre com uma conta premium para visualizar seus familiares salvos.</p></div>'; return; }
  try{
-  const rows=await listMyFamiliars();
+  const rows=await reloadFamiliars();
   if(!rows.length){ box.innerHTML='<div class="info-card"><h4>Nenhum familiar salvo</h4><p>Monte um familiar e clique em Salvar Familiar.</p></div>'; return; }
-  box.innerHTML=rows.map(f=>`<div class="info-card"><h4>${f.nome||'Familiar sem nome'}</h4><ul><li>Espécie: ${f.especie||'-'}</li><li>Função: ${f.funcao||'-'}</li><li>Elemento: ${f.elemento||'-'}</li><li>Ranque: ${f.ranque||'-'}</li><li>Salvo em: ${fmtDate(f.createdAt)}</li></ul>${f.habilidadeGeradaHTML?`<details><summary>Habilidade gerada</summary>${f.habilidadeGeradaHTML}</details>`:''}</div>`).join('');
+  box.innerHTML=rows.map(f=>`<div class="info-card"><h4>${f.nome||'Familiar sem nome'}</h4><ul><li>Espécie: ${f.especie||'-'}</li><li>Função: ${f.funcao||'-'}</li><li>Elemento: ${f.elemento||'-'}</li><li>Ranque: ${f.ranque||'-'}</li><li>Salvo em: ${fmtDate(f.createdAt)}</li></ul>${f.habilidadeGeradaHTML?`<details><summary>Habilidade gerada</summary>${f.habilidadeGeradaHTML}</details>`:''}<button class="btn-secondary delete-familiar-btn" data-id="${f.id}" type="button">Deletar familiar</button></div>`).join('');
+  box.querySelectorAll('.delete-familiar-btn').forEach(btn=>btn.addEventListener('click', async ()=>{ if(!confirm('Deletar este familiar? Esta ação não pode ser desfeita.')) return; try{ await deleteFamiliar(btn.dataset.id); const rows=await reloadFamiliars(); if(!rows.length){ box.innerHTML='<div class="info-card"><h4>Nenhum familiar salvo</h4><p>Monte um familiar e clique em Salvar Familiar.</p></div>'; return; } btn.closest('.info-card')?.remove(); }catch(err){ alert(err.message||'Erro ao deletar familiar.'); } }));
  }catch(err){ box.innerHTML=`<div class="info-card"><h4>Erro</h4><p>${err.message}</p></div>`; }
 });
 </script></body></html>

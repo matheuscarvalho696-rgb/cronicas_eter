@@ -408,6 +408,7 @@ export async function saveCharacter(character) {
     rankInicial: cleanText(character.rankInicial, "D"),
     talentos: Array.isArray(character.talentos) ? character.talentos : [],
     distribuicaoInicial: character.distribuicaoInicial || {},
+    pontosDistribuicaoDireta: character.pontosDistribuicaoDireta || {},
     simulacao: character.simulacao || {},
     equipamentosSimulados: character.equipamentosSimulados || {},
     resumo: character.resumo || {},
@@ -513,4 +514,30 @@ export async function listMyFamiliars() {
   const rows = [];
   snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
   return rows.reverse();
+}
+
+export async function deleteCharacter(characterId) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!characterId) throw new Error("Personagem inválido.");
+  const ref = doc(db, "characters", characterId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Personagem não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios personagens.");
+  await deleteDoc(ref);
+  await createLog("character.deleted", { characterId, nome: data.nome || "" });
+}
+
+export async function deleteFamiliar(familiarId) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!familiarId) throw new Error("Familiar inválido.");
+  const ref = doc(db, "familiars", familiarId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Familiar não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios familiares.");
+  await deleteDoc(ref);
+  await createLog("familiar.deleted", { familiarId, nome: data.nome || "" });
 }
