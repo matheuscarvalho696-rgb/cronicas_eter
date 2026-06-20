@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Painel Admin — Crônicas do Éter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+</head>
+<body>
+<nav class="topbar">
+  <a class="nav-brand" href="index.html">Crônicas do Éter</a>
+  <a class="top-xp-link" href="calculadora.html">Calculadora XP/PT</a>
+  <button aria-label="Abrir menu" class="nav-toggle">☰</button>
+</nav>
+<aside aria-label="Menu lateral" class="sidebar">
+  <div class="sidebar-title">Compêndio</div>
+  <a href="index.html">Início</a>
+  <a href="racas.html">Raças</a>
+  <a href="classes.html">Classes</a>
+  <a href="especializacoes.html">Especializações</a>
+  <a href="talentos.html">Talentos</a>
+  <a href="crie-personagem.html">Crie seu Personagem</a>
+  <a href="habilidades.html">Habilidades</a>
+  <a href="familiar.html">Familiar</a>
+  <a href="divindades.html">Divindades</a>
+  <a href="mercado.html">Mercado</a>
+  <a href="criacao-equipamentos.html">Criação de Equipamentos</a>
+</aside>
+<div id="stars"></div>
+<header class="page-header">
+  <div class="breadcrumb"><a href="index.html">Início</a> / Admin</div>
+  <div class="page-eyebrow">Painel Administrativo</div>
+  <h1 class="page-title">Administração</h1>
+  <p class="page-intro">Gerencie o código de convite, usuários e permissões iniciais da plataforma.</p>
+</header>
+<section>
+  <div class="container admin-grid">
+    <div id="adminStatus" class="info-card"><p>Carregando...</p></div>
+    <div id="accessPanel" class="info-card hidden">
+      <h3>Configurações de Acesso</h3>
+      <label class="field-label">Código de convite
+        <input id="adminInviteCode" type="text" placeholder="CRONICAS2026" />
+      </label>
+      <label class="checkbox-line"><input id="adminFamiliarFree" type="checkbox" /> Familiar liberado para visitantes</label>
+      <label class="checkbox-line"><input id="adminMaintenance" type="checkbox" /> Modo manutenção</label>
+      <button id="saveSettings" class="btn-primary" type="button">Salvar Configurações</button>
+      <p id="settingsMessage" class="auth-message"></p>
+    </div>
+    <div id="usersPanel" class="info-card hidden admin-wide">
+      <h3>Usuários</h3>
+      <p class="muted">Aqui você pode promover usuários a Mestre/Admin ou bloquear acessos.</p>
+      <div id="usersList" class="admin-users-list"></div>
+    </div>
+  </div>
+</section>
+<script src="script.js"></script>
+<script type="module" src="auth-widget.js"></script>
+<script type="module">
+import { watchAuth, isAdmin, getAccessSettings } from './auth-service.js';
+import { getFirebase, doc, updateDoc, collection, getDocs, query, orderBy } from './firebase-app.js';
+
+const statusBox = document.getElementById('adminStatus');
+const accessPanel = document.getElementById('accessPanel');
+const usersPanel = document.getElementById('usersPanel');
+const inviteInput = document.getElementById('adminInviteCode');
+const familiarFreeInput = document.getElementById('adminFamiliarFree');
+const maintenanceInput = document.getElementById('adminMaintenance');
+const settingsMessage = document.getElementById('settingsMessage');
+const usersList = document.getElementById('usersList');
+
+function setSettingsMessage(text, type='') { settingsMessage.textContent = text; settingsMessage.className = 'auth-message ' + type; }
+
+async function loadSettings(){
+  const settings = await getAccessSettings();
+  inviteInput.value = settings.inviteCode || 'CRONICAS2026';
+  familiarFreeInput.checked = settings.familiarFree !== false;
+  maintenanceInput.checked = Boolean(settings.maintenance);
+}
+
+async function saveSettings(){
+  const { db } = getFirebase();
+  setSettingsMessage('Salvando...');
+  await updateDoc(doc(db, 'settings', 'access'), {
+    inviteCode: inviteInput.value.trim() || 'CRONICAS2026',
+    familiarFree: familiarFreeInput.checked,
+    maintenance: maintenanceInput.checked,
+    siteVersion: '1.0'
+  });
+  setSettingsMessage('Configurações salvas.', 'success');
+}
+
+function renderUserRow(user){
+  const div = document.createElement('div');
+  div.className = 'admin-user-row';
+  div.innerHTML = `
+    <div>
+      <strong>${user.nome || 'Sem nome'}</strong>
+      <span>${user.email || ''}</span>
+    </div>
+    <select data-field="role">
+      <option value="player">Jogador</option>
+      <option value="master">Mestre</option>
+      <option value="admin">Admin</option>
+    </select>
+    <select data-field="status">
+      <option value="approved">Aprovado</option>
+      <option value="blocked">Bloqueado</option>
+      <option value="pending">Pendente</option>
+    </select>
+    <button type="button" class="btn-secondary">Salvar</button>
+  `;
+  div.querySelector('[data-field="role"]').value = user.role || 'player';
+  div.querySelector('[data-field="status"]').value = user.status || 'approved';
+  div.querySelector('button').addEventListener('click', async () => {
+    const { db } = getFirebase();
+    await updateDoc(doc(db, 'users', user.uid), {
+      role: div.querySelector('[data-field="role"]').value,
+      status: div.querySelector('[data-field="status"]').value
+    });
+    div.classList.add('saved');
+    setTimeout(()=>div.classList.remove('saved'), 900);
+  });
+  return div;
+}
+
+async function loadUsers(){
+  const { db } = getFirebase();
+  usersList.innerHTML = '<p>Carregando usuários...</p>';
+  const q = query(collection(db, 'users'), orderBy('email'));
+  const snap = await getDocs(q);
+  usersList.innerHTML = '';
+  if (snap.empty) {
+    usersList.innerHTML = '<p>Nenhum usuário cadastrado ainda.</p>';
+    return;
+  }
+  snap.forEach(docSnap => usersList.appendChild(renderUserRow({ uid: docSnap.id, ...docSnap.data() })));
+}
+
+document.getElementById('saveSettings').addEventListener('click', () => saveSettings().catch(err => setSettingsMessage(err.message || 'Erro ao salvar.', 'error')));
+
+watchAuth(async ({ user, profile, configured }) => {
+  if (!configured) { statusBox.innerHTML = '<h3>Firebase não configurado</h3><p>Preencha firebase-config.js para ativar o painel.</p>'; return; }
+  if (!user) { window.location.href = 'login.html?redirect=admin.html'; return; }
+  if (!isAdmin(profile)) { statusBox.innerHTML = '<h3>Acesso negado</h3><p>Somente administradores aprovados podem acessar este painel.</p>'; return; }
+  statusBox.innerHTML = '<h3>Painel liberado</h3><p>Você está acessando como administrador.</p>';
+  accessPanel.classList.remove('hidden');
+  usersPanel.classList.remove('hidden');
+  await loadSettings();
+  await loadUsers();
+});
+</script>
+</body>
+</html>

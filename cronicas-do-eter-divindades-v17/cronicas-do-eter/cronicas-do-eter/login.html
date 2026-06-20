@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Entrar — Crônicas do Éter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+</head>
+<body>
+<div id="stars"></div>
+<nav class="topbar">
+<a class="nav-brand" href="index.html">Crônicas do Éter</a>
+<a class="top-xp-link" href="calculadora.html">Calculadora XP/PT</a>
+</nav>
+<main class="auth-page">
+<section class="auth-card">
+<p class="section-label">Acesso dos Jogadores</p>
+<h1 class="auth-heading">Entrar no Éter</h1>
+<p class="auth-copy">Crie sua conta usando o código de acesso da mesa. Visitantes ainda podem consultar o conteúdo público e montar familiares.</p>
+<div class="auth-tabs">
+<button class="auth-tab active" data-auth-tab="login">Entrar</button>
+<button class="auth-tab" data-auth-tab="register">Criar conta</button>
+</div>
+<div id="firebaseWarning" class="auth-warning hidden"></div>
+<form id="loginForm" class="auth-form">
+<label>E-mail<input type="email" id="loginEmail" required autocomplete="email"/></label>
+<label>Senha<input type="password" id="loginPassword" required autocomplete="current-password"/></label>
+<button class="btn-primary full" type="submit">Entrar</button>
+<button class="link-button" type="button" id="forgotPassword">Esqueci minha senha</button>
+</form>
+<form id="registerForm" class="auth-form hidden">
+<label>Nome do jogador<input type="text" id="registerName" required autocomplete="name"/></label>
+<label>E-mail<input type="email" id="registerEmail" required autocomplete="email"/></label>
+<label>Senha<input type="password" id="registerPassword" required minlength="6" autocomplete="new-password"/></label>
+<label>Código de acesso<input type="text" id="inviteCode" required placeholder="Ex: CRONICAS2026"/></label>
+<button class="btn-primary full" type="submit">Criar Conta</button>
+</form>
+<p id="authMessage" class="auth-message"></p>
+</section>
+</main>
+<script type="module">
+import { isAuthConfigured, login, registerWithInvite, resetPassword, watchAuth } from './auth-service.js';
+
+const params = new URLSearchParams(location.search);
+const redirect = params.get('redirect') || 'perfil.html';
+const tabs = document.querySelectorAll('.auth-tab');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const msg = document.getElementById('authMessage');
+const warning = document.getElementById('firebaseWarning');
+
+function setMessage(text, type='') { msg.textContent = text; msg.className = 'auth-message ' + type; }
+function setTab(tab) {
+  tabs.forEach(b => b.classList.toggle('active', b.dataset.authTab === tab));
+  loginForm.classList.toggle('hidden', tab !== 'login');
+  registerForm.classList.toggle('hidden', tab !== 'register');
+  setMessage('');
+}
+tabs.forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.authTab)));
+
+if (!isAuthConfigured()) {
+  warning.classList.remove('hidden');
+  warning.textContent = 'Firebase ainda não configurado. Preencha firebase-config.js antes de usar login real.';
+}
+
+watchAuth(({ user, configured }) => {
+  if (configured && user) window.location.href = redirect;
+});
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    setMessage('Entrando...');
+    await login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+    window.location.href = redirect;
+  } catch (err) {
+    setMessage(err.message || 'Não foi possível entrar.', 'error');
+  }
+});
+
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    setMessage('Criando conta...');
+    await registerWithInvite({
+      nome: document.getElementById('registerName').value.trim(),
+      email: document.getElementById('registerEmail').value.trim(),
+      senha: document.getElementById('registerPassword').value,
+      inviteCode: document.getElementById('inviteCode').value.trim()
+    });
+    setMessage('Conta criada com sucesso. Redirecionando...', 'success');
+    setTimeout(() => window.location.href = redirect, 700);
+  } catch (err) {
+    setMessage(err.message || 'Não foi possível criar a conta.', 'error');
+  }
+});
+
+document.getElementById('forgotPassword').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) return setMessage('Digite seu e-mail primeiro.', 'error');
+  try { await resetPassword(email); setMessage('E-mail de recuperação enviado.', 'success'); }
+  catch (err) { setMessage(err.message || 'Não foi possível enviar recuperação.', 'error'); }
+});
+</script>
+</body>
+</html>
