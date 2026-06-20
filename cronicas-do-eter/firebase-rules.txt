@@ -29,9 +29,23 @@ service cloud.firestore {
       allow write: if isAdmin() || isBootstrapAdminEmail();
     }
 
+    match /inviteCodes/{codeId} {
+      // Qualquer visitante pode testar um código específico, mas não pode listar todos.
+      allow get: if true;
+      allow list: if isAdmin();
+
+      allow create, delete: if isAdmin();
+
+      // Admin pode editar; usuário autenticado pode apenas marcar o próprio código como usado no cadastro.
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'used'
+        && request.resource.data.usedBy == request.auth.uid
+      );
+    }
+
     match /users/{userId} {
-      // O jogador cria apenas a própria conta.
-      // A conta bootstrap do Matheus pode nascer como admin.
       allow create: if isSelf(userId) && (
         (
           request.resource.data.role == 'player'
@@ -47,13 +61,11 @@ service cloud.firestore {
 
       allow read: if isSelf(userId) || isAdmin();
 
-      // Usuário pode atualizar dados próprios, mas não pode se promover.
       allow update: if isSelf(userId)
         && !('role' in request.resource.data.diff(resource.data).changedKeys())
         && !('status' in request.resource.data.diff(resource.data).changedKeys())
         && !('premium' in request.resource.data.diff(resource.data).changedKeys());
 
-      // A conta bootstrap do Matheus pode corrigir a si mesma para admin.
       allow update: if isSelf(userId)
         && isBootstrapAdminEmail()
         && request.resource.data.role == 'admin'

@@ -32,152 +32,295 @@
   <div class="breadcrumb"><a href="index.html">Início</a> / Admin</div>
   <div class="page-eyebrow">Painel Administrativo</div>
   <h1 class="page-title">Administração</h1>
-  <p class="page-intro">Gerencie o código de convite, usuários e permissões iniciais da plataforma.</p>
+  <p class="page-intro">Gerencie usuários, convites, permissões e configurações gerais da plataforma.</p>
 </header>
 <section>
-  <div class="container admin-grid">
+  <div class="container admin-dashboard">
     <div id="adminStatus" class="info-card"><p>Carregando...</p></div>
-    <div id="accessPanel" class="info-card hidden">
-      <h3>Configurações de Acesso</h3>
-      <label class="field-label">Código de convite atual
+
+    <div id="statsPanel" class="admin-stats hidden">
+      <div class="stat-card"><span id="statUsers">0</span><strong>Usuários</strong></div>
+      <div class="stat-card"><span id="statPlayers">0</span><strong>Jogadores</strong></div>
+      <div class="stat-card"><span id="statMasters">0</span><strong>Mestres</strong></div>
+      <div class="stat-card"><span id="statAdmins">0</span><strong>Admins</strong></div>
+      <div class="stat-card"><span id="statBlocked">0</span><strong>Bloqueados</strong></div>
+      <div class="stat-card"><span id="statPremium">0</span><strong>Premium</strong></div>
+    </div>
+
+    <div id="adminTabs" class="admin-tabs hidden">
+      <button class="admin-tab active" data-admin-tab="users">Usuários</button>
+      <button class="admin-tab" data-admin-tab="invites">Convites</button>
+      <button class="admin-tab" data-admin-tab="settings">Configurações</button>
+      <button class="admin-tab" data-admin-tab="logs">Logs</button>
+    </div>
+
+    <div id="usersPanel" class="info-card hidden admin-section" data-admin-panel="users">
+      <div class="section-headline">
+        <div>
+          <h3>Usuários</h3>
+          <p class="muted">Promova jogadores, bloqueie contas e controle o acesso Premium.</p>
+        </div>
+        <button id="refreshUsers" class="btn-secondary" type="button">Atualizar</button>
+      </div>
+      <input id="userSearch" class="admin-search" type="search" placeholder="Buscar por nome ou e-mail..." />
+      <div id="usersList" class="admin-users-list"></div>
+    </div>
+
+    <div id="invitesPanel" class="info-card hidden admin-section" data-admin-panel="invites">
+      <h3>Códigos de Convite</h3>
+      <p class="muted">Crie códigos individuais para jogadores. Eles podem ser usados no cadastro. Envio automático por e-mail ficará para uma sprint futura.</p>
+      <div class="invite-maker">
+        <input id="newInviteCode" type="text" placeholder="Clique em gerar ou digite um código" />
+        <button id="generateIndividualInvite" class="btn-secondary" type="button">Gerar</button>
+        <button id="saveIndividualInvite" class="btn-primary" type="button">Salvar Código</button>
+      </div>
+      <p id="inviteMessage" class="auth-message"></p>
+      <div id="inviteCodesList" class="invite-list"></div>
+    </div>
+
+    <div id="settingsPanel" class="info-card hidden admin-section" data-admin-panel="settings">
+      <h3>Configurações Gerais</h3>
+      <label class="field-label">Código global de convite
         <input id="adminInviteCode" type="text" placeholder="CRONICAS2026" />
       </label>
-      <div class="auth-actions compact-actions">
-        <button id="generateInviteCode" class="btn-secondary" type="button">Gerar código aleatório</button>
-        <button id="copyInviteCode" class="btn-secondary" type="button">Copiar código</button>
-      </div>
-      <p class="muted small-note">Envie esse código manualmente aos seus jogadores. Envio automático por e-mail exigirá backend/Cloud Functions numa sprint futura.</p>
+      <p class="muted small-note">Esse é o código principal. Também é possível usar códigos individuais na aba Convites.</p>
       <label class="checkbox-line"><input id="adminFamiliarFree" type="checkbox" /> Familiar liberado para visitantes</label>
       <label class="checkbox-line"><input id="adminMaintenance" type="checkbox" /> Modo manutenção</label>
+      <label class="field-label">Versão do site
+        <input id="adminSiteVersion" type="text" placeholder="1.0" />
+      </label>
       <button id="saveSettings" class="btn-primary" type="button">Salvar Configurações</button>
       <p id="settingsMessage" class="auth-message"></p>
     </div>
-    <div id="usersPanel" class="info-card hidden admin-wide">
-      <h3>Usuários</h3>
-      <p class="muted">Aqui você pode promover usuários a Mestre/Admin ou bloquear acessos.</p>
-      <div id="usersList" class="admin-users-list"></div>
+
+    <div id="logsPanel" class="info-card hidden admin-section" data-admin-panel="logs">
+      <div class="section-headline">
+        <div>
+          <h3>Logs Recentes</h3>
+          <p class="muted">Eventos administrativos e ações importantes.</p>
+        </div>
+        <button id="refreshLogs" class="btn-secondary" type="button">Atualizar</button>
+      </div>
+      <div id="logsList" class="logs-list"></div>
     </div>
   </div>
 </section>
 <script src="script.js"></script>
 <script type="module" src="auth-widget.js"></script>
 <script type="module">
-import { watchAuth, isAdmin, getAccessSettings } from './auth-service.js';
-import { getFirebase, doc, updateDoc, collection, getDocs, query, orderBy } from './firebase-app.js';
+import {
+  watchAuth,
+  isAdmin,
+  getAccessSettings,
+  updateAccessSettings,
+  listUsers,
+  adminUpdateUser,
+  getDashboardStats,
+  makeInviteCode,
+  adminCreateInviteCode,
+  adminDisableInviteCode,
+  listInviteCodes,
+  listLogs
+} from './auth-service.js';
 
 const statusBox = document.getElementById('adminStatus');
-const accessPanel = document.getElementById('accessPanel');
-const usersPanel = document.getElementById('usersPanel');
+const statsPanel = document.getElementById('statsPanel');
+const adminTabs = document.getElementById('adminTabs');
+const sections = document.querySelectorAll('[data-admin-panel]');
+const usersList = document.getElementById('usersList');
+const userSearch = document.getElementById('userSearch');
 const inviteInput = document.getElementById('adminInviteCode');
 const familiarFreeInput = document.getElementById('adminFamiliarFree');
 const maintenanceInput = document.getElementById('adminMaintenance');
+const siteVersionInput = document.getElementById('adminSiteVersion');
 const settingsMessage = document.getElementById('settingsMessage');
-const generateInviteCodeBtn = document.getElementById('generateInviteCode');
-const copyInviteCodeBtn = document.getElementById('copyInviteCode');
-const usersList = document.getElementById('usersList');
+const inviteMessage = document.getElementById('inviteMessage');
+const newInviteCode = document.getElementById('newInviteCode');
+const inviteCodesList = document.getElementById('inviteCodesList');
+const logsList = document.getElementById('logsList');
+let cachedUsers = [];
 
-function setSettingsMessage(text, type='') { settingsMessage.textContent = text; settingsMessage.className = 'auth-message ' + type; }
+function setMessage(el, text, type='') { el.textContent = text; el.className = 'auth-message ' + type; }
+
+function setTab(name) {
+  document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.adminTab === name));
+  sections.forEach(sec => sec.classList.toggle('hidden', sec.dataset.adminPanel !== name));
+}
+
+document.querySelectorAll('.admin-tab').forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.adminTab)));
 
 async function loadSettings(){
   const settings = await getAccessSettings();
   inviteInput.value = settings.inviteCode || 'CRONICAS2026';
   familiarFreeInput.checked = settings.familiarFree !== false;
   maintenanceInput.checked = Boolean(settings.maintenance);
+  siteVersionInput.value = settings.siteVersion || '1.0';
 }
 
 async function saveSettings(){
-  const { db } = getFirebase();
-  setSettingsMessage('Salvando...');
-  await updateDoc(doc(db, 'settings', 'access'), {
+  setMessage(settingsMessage, 'Salvando...');
+  await updateAccessSettings({
     inviteCode: inviteInput.value.trim() || 'CRONICAS2026',
     familiarFree: familiarFreeInput.checked,
     maintenance: maintenanceInput.checked,
-    siteVersion: '1.0'
+    siteVersion: siteVersionInput.value.trim() || '1.0'
   });
-  setSettingsMessage('Configurações salvas.', 'success');
+  setMessage(settingsMessage, 'Configurações salvas.', 'success');
+}
+
+function roleLabel(role) {
+  return role === 'admin' ? 'Admin' : role === 'master' ? 'Mestre' : 'Jogador';
+}
+
+function statusLabel(status) {
+  return status === 'blocked' ? 'Bloqueado' : status === 'pending' ? 'Pendente' : 'Aprovado';
 }
 
 function renderUserRow(user){
   const div = document.createElement('div');
   div.className = 'admin-user-row';
+  div.dataset.search = `${user.nome || ''} ${user.email || ''}`.toLowerCase();
   div.innerHTML = `
     <div>
       <strong>${user.nome || 'Sem nome'}</strong>
       <span>${user.email || ''}</span>
+      <small>${user.uid}</small>
     </div>
-    <select data-field="role">
+    <select data-field="role" title="Função">
       <option value="player">Jogador</option>
       <option value="master">Mestre</option>
       <option value="admin">Admin</option>
     </select>
-    <select data-field="status">
+    <select data-field="status" title="Status">
       <option value="approved">Aprovado</option>
       <option value="blocked">Bloqueado</option>
       <option value="pending">Pendente</option>
     </select>
+    <label class="premium-toggle"><input data-field="premium" type="checkbox" /> Premium</label>
     <button type="button" class="btn-secondary">Salvar</button>
   `;
   div.querySelector('[data-field="role"]').value = user.role || 'player';
   div.querySelector('[data-field="status"]').value = user.status || 'approved';
+  div.querySelector('[data-field="premium"]').checked = user.premium === true;
   div.querySelector('button').addEventListener('click', async () => {
-    const { db } = getFirebase();
-    await updateDoc(doc(db, 'users', user.uid), {
+    await adminUpdateUser(user.uid, {
       role: div.querySelector('[data-field="role"]').value,
-      status: div.querySelector('[data-field="status"]').value
+      status: div.querySelector('[data-field="status"]').value,
+      premium: div.querySelector('[data-field="premium"]').checked
     });
     div.classList.add('saved');
     setTimeout(()=>div.classList.remove('saved'), 900);
+    await loadStats();
   });
   return div;
 }
 
+function filterUsers(){
+  const term = userSearch.value.trim().toLowerCase();
+  usersList.querySelectorAll('.admin-user-row').forEach(row => {
+    row.classList.toggle('hidden', term && !row.dataset.search.includes(term));
+  });
+}
+
 async function loadUsers(){
-  const { db } = getFirebase();
   usersList.innerHTML = '<p>Carregando usuários...</p>';
-  const q = query(collection(db, 'users'), orderBy('email'));
-  const snap = await getDocs(q);
+  cachedUsers = await listUsers();
   usersList.innerHTML = '';
-  if (snap.empty) {
+  if (!cachedUsers.length) {
     usersList.innerHTML = '<p>Nenhum usuário cadastrado ainda.</p>';
     return;
   }
-  snap.forEach(docSnap => usersList.appendChild(renderUserRow({ uid: docSnap.id, ...docSnap.data() })));
+  cachedUsers.forEach(user => usersList.appendChild(renderUserRow(user)));
+  filterUsers();
 }
 
-
-function makeInviteCode(){
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = 'ETER-';
-  for (let i = 0; i < 8; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return code;
+async function loadStats(){
+  const s = await getDashboardStats();
+  document.getElementById('statUsers').textContent = s.totalUsers;
+  document.getElementById('statPlayers').textContent = s.players;
+  document.getElementById('statMasters').textContent = s.masters;
+  document.getElementById('statAdmins').textContent = s.admins;
+  document.getElementById('statBlocked').textContent = s.blocked;
+  document.getElementById('statPremium').textContent = s.premium;
 }
 
-generateInviteCodeBtn.addEventListener('click', () => {
-  inviteInput.value = makeInviteCode();
-  setSettingsMessage('Novo código gerado. Clique em Salvar Configurações para ativá-lo.', 'success');
-});
+function renderInvite(code){
+  const row = document.createElement('div');
+  row.className = 'invite-row';
+  row.innerHTML = `
+    <div>
+      <strong>${code.code || code.id}</strong>
+      <span>Status: ${code.status || 'active'}${code.usedByEmail ? ' • usado por ' + code.usedByEmail : ''}</span>
+    </div>
+    <button class="btn-secondary" type="button" data-copy>Copiar</button>
+    <button class="btn-secondary danger-lite" type="button" data-disable ${code.status !== 'active' ? 'disabled' : ''}>Desativar</button>
+  `;
+  row.querySelector('[data-copy]').addEventListener('click', async () => {
+    await navigator.clipboard.writeText(code.code || code.id).catch(()=>{});
+    setMessage(inviteMessage, 'Código copiado.', 'success');
+  });
+  row.querySelector('[data-disable]').addEventListener('click', async () => {
+    await adminDisableInviteCode(code.code || code.id);
+    setMessage(inviteMessage, 'Código desativado.', 'success');
+    await loadInvites();
+  });
+  return row;
+}
 
-copyInviteCodeBtn.addEventListener('click', async () => {
+async function loadInvites(){
+  inviteCodesList.innerHTML = '<p>Carregando convites...</p>';
+  const codes = await listInviteCodes();
+  inviteCodesList.innerHTML = '';
+  if (!codes.length) {
+    inviteCodesList.innerHTML = '<p>Nenhum código individual criado ainda.</p>';
+    return;
+  }
+  codes.forEach(code => inviteCodesList.appendChild(renderInvite(code)));
+}
+
+async function loadLogs(){
+  logsList.innerHTML = '<p>Carregando logs...</p>';
+  const logs = await listLogs(30);
+  logsList.innerHTML = '';
+  if (!logs.length) {
+    logsList.innerHTML = '<p>Nenhum log registrado ainda.</p>';
+    return;
+  }
+  logs.forEach(log => {
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    row.innerHTML = `<strong>${log.action}</strong><span>${log.actorEmail || 'sistema'}</span><pre>${JSON.stringify(log.details || {}, null, 2)}</pre>`;
+    logsList.appendChild(row);
+  });
+}
+
+document.getElementById('saveSettings').addEventListener('click', () => saveSettings().catch(err => setMessage(settingsMessage, err.message || 'Erro ao salvar.', 'error')));
+document.getElementById('refreshUsers').addEventListener('click', () => Promise.all([loadUsers(), loadStats()]));
+document.getElementById('refreshLogs').addEventListener('click', () => loadLogs());
+userSearch.addEventListener('input', filterUsers);
+document.getElementById('generateIndividualInvite').addEventListener('click', () => { newInviteCode.value = makeInviteCode(); });
+document.getElementById('saveIndividualInvite').addEventListener('click', async () => {
   try {
-    await navigator.clipboard.writeText(inviteInput.value.trim());
-    setSettingsMessage('Código copiado.', 'success');
+    setMessage(inviteMessage, 'Salvando código...');
+    const code = await adminCreateInviteCode(newInviteCode.value.trim());
+    newInviteCode.value = code;
+    setMessage(inviteMessage, 'Código criado: ' + code, 'success');
+    await loadInvites();
   } catch (err) {
-    setSettingsMessage('Não foi possível copiar automaticamente. Selecione e copie manualmente.', 'error');
+    setMessage(inviteMessage, err.message || 'Erro ao criar código.', 'error');
   }
 });
-
-document.getElementById('saveSettings').addEventListener('click', () => saveSettings().catch(err => setSettingsMessage(err.message || 'Erro ao salvar.', 'error')));
-
 
 watchAuth(async ({ user, profile, configured }) => {
   if (!configured) { statusBox.innerHTML = '<h3>Firebase não configurado</h3><p>Preencha firebase-config.js para ativar o painel.</p>'; return; }
   if (!user) { window.location.href = 'login.html?redirect=admin.html'; return; }
   if (!isAdmin(profile)) { statusBox.innerHTML = '<h3>Acesso negado</h3><p>Somente administradores aprovados podem acessar este painel.</p>'; return; }
-  statusBox.innerHTML = '<h3>Painel liberado</h3><p>Você está acessando como administrador.</p>';
-  accessPanel.classList.remove('hidden');
-  usersPanel.classList.remove('hidden');
-  await loadSettings();
-  await loadUsers();
+  statusBox.innerHTML = `<h3>Painel liberado</h3><p>Você está acessando como administrador: <strong>${profile.email || user.email}</strong>.</p>`;
+  statsPanel.classList.remove('hidden');
+  adminTabs.classList.remove('hidden');
+  sections.forEach(sec => sec.classList.add('hidden'));
+  document.querySelector('[data-admin-panel="users"]').classList.remove('hidden');
+  await Promise.all([loadSettings(), loadUsers(), loadStats(), loadInvites(), loadLogs()]);
 });
 </script>
 </body>

@@ -10,25 +10,85 @@
 <body><nav class="topbar"><a class="nav-brand" href="index.html">Crônicas do Éter</a><a class="top-xp-link" href="calculadora.html">Calculadora XP/PT</a><button aria-label="Abrir menu" class="nav-toggle">☰</button></nav>
 <aside aria-label="Menu lateral" class="sidebar"><div class="sidebar-title">Compêndio</div><a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a><a href="mercado.html">Mercado</a><a href="criacao-equipamentos.html">Criação de Equipamentos</a></aside>
 <div id="stars"></div>
-<header class="page-header"><div class="breadcrumb"><a href="index.html">Início</a> / Meu Perfil</div><div class="page-eyebrow">Área do Jogador</div><h1 class="page-title">Meu Perfil</h1><p class="page-intro">Seu acesso, personagem, familiar e progresso ficarão salvos aqui conforme a plataforma evoluir.</p></header>
-<section><div class="container"><div id="profilePanel" class="info-card"><p>Carregando perfil...</p></div></div></section>
+<header class="page-header"><div class="breadcrumb"><a href="index.html">Início</a> / Meu Perfil</div><div class="page-eyebrow">Área do Jogador</div><h1 class="page-title">Meu Perfil</h1><p class="page-intro">Gerencie seus dados básicos e acompanhe seu acesso à plataforma.</p></header>
+<section><div class="container profile-grid">
+  <div id="profilePanel" class="info-card"><p>Carregando perfil...</p></div>
+  <div id="profileEditPanel" class="info-card hidden">
+    <h3>Editar Perfil</h3>
+    <label class="field-label">Nome exibido
+      <input id="profileName" type="text" placeholder="Seu nome" />
+    </label>
+    <label class="checkbox-line"><input id="receiveUpdates" type="checkbox" /> Quero receber avisos e novidades da mesa</label>
+    <button id="saveProfile" class="btn-primary" type="button">Salvar Perfil</button>
+    <p id="profileMessage" class="auth-message"></p>
+  </div>
+  <div id="futurePanel" class="info-card profile-wide hidden">
+    <h3>Próximas integrações</h3>
+    <div class="profile-modules">
+      <div><strong>Personagens</strong><span>Ficha online e múltiplos personagens.</span></div>
+      <div><strong>Familiar</strong><span>Familiar salvo e habilidades geradas.</span></div>
+      <div><strong>Inventário</strong><span>Moedas, mercado e equipamentos.</span></div>
+      <div><strong>Calculadora</strong><span>Validação de XP/PT direto na ficha.</span></div>
+    </div>
+  </div>
+</div></section>
 <script src="script.js"></script>
 <script type="module" src="auth-widget.js"></script>
 <script type="module">
-import { watchAuth, hasApprovedAccess } from './auth-service.js';
+import { watchAuth, hasApprovedAccess, updateOwnProfile } from './auth-service.js';
 const panel = document.getElementById('profilePanel');
+const editPanel = document.getElementById('profileEditPanel');
+const futurePanel = document.getElementById('futurePanel');
+const nameInput = document.getElementById('profileName');
+const updatesInput = document.getElementById('receiveUpdates');
+const msg = document.getElementById('profileMessage');
+let currentUser = null;
+let currentProfile = null;
+function setMessage(text, type='') { msg.textContent = text; msg.className = 'auth-message ' + type; }
+function safeDate(value) {
+  try {
+    if (!value) return '—';
+    if (value.toDate) return value.toDate().toLocaleString('pt-BR');
+    return String(value);
+  } catch { return '—'; }
+}
 watchAuth(({ user, profile, configured }) => {
   if (!configured) { panel.innerHTML = '<h3>Firebase não configurado</h3><p>Preencha firebase-config.js para ativar perfis.</p>'; return; }
   if (!user) { window.location.href = 'login.html?redirect=perfil.html'; return; }
+  currentUser = user;
+  currentProfile = profile || {};
   const status = hasApprovedAccess(profile) ? 'Acesso liberado' : 'Aguardando aprovação';
+  const premium = profile?.premium ? 'Sim' : 'Não';
+  const role = profile?.role || 'player';
+  nameInput.value = profile?.nome || user.displayName || user.email;
+  updatesInput.checked = profile?.settings?.receiveUpdates !== false;
   panel.innerHTML = `
     <h3>${profile?.nome || user.email}</h3>
-    <p><strong>E-mail:</strong> ${user.email}</p>
-    <p><strong>Status:</strong> ${status}</p>
-    <p><strong>Função:</strong> ${profile?.role || 'player'}</p>
-    <div class="rune-divider"><span>✦</span></div>
-    <p>Próximas etapas: ficha online, personagem salvo, inventário, mercado integrado e familiar salvo.</p>
+    <div class="profile-summary">
+      <p><strong>E-mail:</strong> ${user.email}</p>
+      <p><strong>Status:</strong> ${status}</p>
+      <p><strong>Função:</strong> ${role}</p>
+      <p><strong>Premium:</strong> ${premium}</p>
+      <p><strong>Criado em:</strong> ${safeDate(profile?.createdAt)}</p>
+      <p><strong>Último login:</strong> ${safeDate(profile?.lastLogin)}</p>
+    </div>
   `;
+  editPanel.classList.remove('hidden');
+  futurePanel.classList.remove('hidden');
+});
+
+document.getElementById('saveProfile').addEventListener('click', async () => {
+  try {
+    if (!currentUser) return;
+    setMessage('Salvando...');
+    await updateOwnProfile(currentUser.uid, {
+      nome: nameInput.value,
+      receiveUpdates: updatesInput.checked
+    });
+    setMessage('Perfil salvo. Recarregue a página se o nome não atualizar imediatamente.', 'success');
+  } catch (err) {
+    setMessage(err.message || 'Erro ao salvar perfil.', 'error');
+  }
 });
 </script>
 </body></html>
