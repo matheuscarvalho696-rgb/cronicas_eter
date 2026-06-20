@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Meu Perfil — Crônicas do Éter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+</head>
+<body><nav class="topbar"><a class="nav-brand" href="index.html">Crônicas do Éter</a><a class="top-xp-link" href="calculadora.html">Calculadora XP/PT</a><button aria-label="Abrir menu" class="nav-toggle">☰</button></nav>
+<aside aria-label="Menu lateral" class="sidebar"><div class="sidebar-title">Compêndio</div><a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a><a href="mercado.html">Mercado</a><a href="criacao-equipamentos.html">Criação de Equipamentos</a></aside>
+<div id="stars"></div>
+<header class="page-header"><div class="breadcrumb"><a href="index.html">Início</a> / Meu Perfil</div><div class="page-eyebrow">Área do Jogador</div><h1 class="page-title">Meu Perfil</h1><p class="page-intro">Seu acesso, personagem, familiar e progresso ficarão salvos aqui conforme a plataforma evoluir.</p></header>
+<section><div class="container"><div id="profilePanel" class="info-card"><p>Carregando perfil...</p></div></div></section>
+<script src="script.js"></script>
+<script type="module" src="auth-widget.js"></script>
+<script type="module">
+import { watchAuth, hasApprovedAccess } from './auth-service.js';
+const panel = document.getElementById('profilePanel');
+watchAuth(({ user, profile, configured }) => {
+  if (!configured) { panel.innerHTML = '<h3>Firebase não configurado</h3><p>Preencha firebase-config.js para ativar perfis.</p>'; return; }
+  if (!user) { window.location.href = 'login.html?redirect=perfil.html'; return; }
+  const status = hasApprovedAccess(profile) ? 'Acesso liberado' : 'Aguardando aprovação';
+  panel.innerHTML = `
+    <h3>${profile?.nome || user.email}</h3>
+    <p><strong>E-mail:</strong> ${user.email}</p>
+    <p><strong>Status:</strong> ${status}</p>
+    <p><strong>Função:</strong> ${profile?.role || 'player'}</p>
+    <div class="rune-divider"><span>✦</span></div>
+    <p>Próximas etapas: ficha online, personagem salvo, inventário, mercado integrado e familiar salvo.</p>
+  `;
+});
+</script>
+</body></html>
