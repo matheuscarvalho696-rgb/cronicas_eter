@@ -106,13 +106,21 @@ service cloud.firestore {
     }
 
     match /roll20Tables/{docId} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if isAdmin() || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      // Todos os usuários logados podem ver as mesas.
+      allow read: if signedIn();
+
+      // Apenas Admin pode criar, editar ou remover mesas.
+      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     match /roll20Imports/{docId} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if isAdmin() || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      // Todos os usuários logados podem ver personagens e folhetos importados.
+      allow read: if signedIn();
+
+      // Apenas Admin pode importar, editar, ocultar ou remover conteúdos.
+      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     match /{document=**} {

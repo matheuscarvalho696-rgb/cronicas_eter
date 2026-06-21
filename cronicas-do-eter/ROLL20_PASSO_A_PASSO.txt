@@ -1,0 +1,47 @@
+PASSO A PASSO — IMPORTAR DO ROLL20 PARA O SITE
+
+1) No site, baixe o arquivo roll20-exporter.js na página Mesas Roll20.
+
+2) Abra o Roll20.
+
+3) Entre na campanha/mesa que você quer exportar.
+
+4) Vá em Settings > API Scripts.
+
+5) Clique para criar um novo script.
+
+6) Apague o texto que vier nele e cole TODO o conteúdo do arquivo roll20-exporter.js.
+
+7) Clique em Save Script.
+
+8) Volte para a mesa do Roll20.
+
+9) No chat da mesa, digite:
+!cde-export
+
+10) O Roll20 vai criar um folheto/handout chamado:
+CDE Export JSON
+
+11) Abra esse handout.
+
+12) Copie TODO o texto JSON que aparece dentro da caixa.
+
+13) Volte para o site > Mesas Roll20.
+
+14) Cadastre/salve a mesa, caso ainda não tenha feito isso.
+
+15) Cole o JSON na área de importação.
+
+16) Clique em Gerar prévia.
+
+17) Marque apenas os personagens e folhetos que você quer trazer.
+
+18) Clique em Importar selecionados.
+
+Comandos úteis:
+!cde-export                 Exporta personagens e folhetos ativos.
+!cde-export --characters    Exporta só personagens.
+!cde-export --handouts      Exporta só folhetos.
+!cde-export --selected      Exporta só personagens dos tokens selecionados.
+!cde-export --all           Inclui arquivados.
+!cde-export --gmnotes       Inclui GM Notes.

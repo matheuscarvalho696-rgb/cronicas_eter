@@ -585,6 +585,14 @@ export async function deleteFamiliar(familiarId) {
 // ========================================================
 // MESAS ROLL20 — LINKS E IMPORTAÇÕES SELETIVAS
 // ========================================================
+
+async function requireAdminUser() {
+  const user = requireCurrentUser();
+  const profile = await getUserProfile(user.uid);
+  if (profile?.role !== "admin") throw new Error("Somente o Admin pode alterar as mesas do Roll20.");
+  return user;
+}
+
 function cleanUrl(value) {
   const url = cleanText(value);
   if (!url) return "";
@@ -611,7 +619,7 @@ function normalizeRoll20Items(items, kind) {
 
 export async function saveRoll20Table(table) {
   const { db } = getFirebase();
-  const user = requireCurrentUser();
+  const user = await requireAdminUser();
   const payload = {
     ownerUid: user.uid,
     ownerEmail: normalizeEmail(user.email || ""),
@@ -638,9 +646,18 @@ export async function listMyRoll20Tables() {
   return rows.reverse();
 }
 
+export async function listRoll20TablesForViewer() {
+  const { db } = getFirebase();
+  requireCurrentUser();
+  const snap = await getDocs(collection(db, "roll20Tables"));
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
+
 export async function deleteRoll20Table(tableId) {
   const { db } = getFirebase();
-  const user = requireCurrentUser();
+  const user = await requireAdminUser();
   if (!tableId) throw new Error("Mesa inválida.");
   const ref = doc(db, "roll20Tables", tableId);
   const snap = await getDoc(ref);
@@ -653,7 +670,7 @@ export async function deleteRoll20Table(tableId) {
 
 export async function importRoll20Selection({ tableId, campaignId, characters = [], handouts = [] }) {
   const { db } = getFirebase();
-  const user = requireCurrentUser();
+  const user = await requireAdminUser();
   const normalizedCharacters = normalizeRoll20Items(characters, "character");
   const normalizedHandouts = normalizeRoll20Items(handouts, "handout");
   const allItems = [...normalizedCharacters, ...normalizedHandouts];
@@ -693,9 +710,18 @@ export async function listMyRoll20Imports() {
   return rows.reverse();
 }
 
+export async function listRoll20ImportsForViewer() {
+  const { db } = getFirebase();
+  requireCurrentUser();
+  const snap = await getDocs(collection(db, "roll20Imports"));
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
+
 export async function updateRoll20Import(importId, patch = {}) {
   const { db } = getFirebase();
-  const user = requireCurrentUser();
+  const user = await requireAdminUser();
   if (!importId) throw new Error("Registro inválido.");
   const ref = doc(db, "roll20Imports", importId);
   const snap = await getDoc(ref);
@@ -715,7 +741,7 @@ export async function updateRoll20Import(importId, patch = {}) {
 
 export async function deleteRoll20Import(importId) {
   const { db } = getFirebase();
-  const user = requireCurrentUser();
+  const user = await requireAdminUser();
   if (!importId) throw new Error("Registro inválido.");
   const ref = doc(db, "roll20Imports", importId);
   const snap = await getDoc(ref);
