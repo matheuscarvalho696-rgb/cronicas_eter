@@ -23,3 +23,12 @@ Como o site está hospedado como frontend estático na Vercel, o envio de e-mail
 ## Observação importante
 
 Esse fluxo verifica o e-mail do jogador por meio do envio do código, mas não substitui uma aprovação manual/pagamento. Para um sistema fechado comercialmente, o ideal no futuro é mover esse envio para backend/Cloud Functions.
+
+
+## Configuração aplicada nesta versão
+
+- Service ID: `service_6cvi8c9`
+- Template ID: `template_e66cvcn`
+- Public Key: já preenchida em `email-config.js`
+
+O template pode usar `{{name}}` ou `{{to_name}}` para o nome do jogador e `{{invite_code}}` para o código.

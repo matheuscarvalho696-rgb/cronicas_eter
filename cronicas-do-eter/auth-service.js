@@ -784,9 +784,13 @@ async function sendInviteEmailViaEmailJS({ email, nome, code }) {
       user_id: cfg.publicKey,
       template_params: {
         to_email: normalizeEmail(email),
+        // O template atual do EmailJS usa {{name}}; mantemos {{to_name}} também
+        // para compatibilidade com templates futuros.
+        name: String(nome || 'Jogador').trim(),
         to_name: String(nome || 'Jogador').trim(),
         invite_code: code,
-        system_name: 'Crônicas do Éter'
+        system_name: 'Crônicas do Éter',
+        expires_in: '30 minutos'
       }
     })
   });
@@ -805,12 +809,14 @@ export async function requestInviteCodeByEmail({ nome, email }) {
   if (!cleanName) throw new Error('Informe o nome do jogador.');
 
   const code = makeInviteCode();
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   await setDoc(doc(db, 'inviteCodes', code), {
     code,
     status: 'active',
     source: 'email-request',
     targetEmail: cleanEmail,
     targetName: cleanName,
+    expiresAt,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });

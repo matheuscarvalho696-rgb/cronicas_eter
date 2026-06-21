@@ -12,9 +12,9 @@
 
 export const emailConfig = {
   provider: "emailjs",
-  publicKey: "COLE_SEU_EMAILJS_PUBLIC_KEY_AQUI",
-  serviceId: "COLE_SEU_EMAILJS_SERVICE_ID_AQUI",
-  templateId: "COLE_SEU_EMAILJS_TEMPLATE_ID_AQUI"
+  publicKey: "wjiY0CYKbpn2zxzCK",
+  serviceId: "service_6cvi8c9",
+  templateId: "template_e66cvcn"
 };
 
 export function isEmailConfigured() {
