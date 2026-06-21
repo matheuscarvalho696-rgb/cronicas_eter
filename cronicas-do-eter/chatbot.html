@@ -108,19 +108,120 @@ function splitSentences(txt){return String(txt||'').split(/(?<=[.!?])\s+|\n+/).m
 function bestExcerpt(c,terms,phrases){const sents=splitSentences(c.text); const scored=sents.map(st=>{const n=normalize(st); let score=0; for(const ph of phrases) if(n.includes(ph)) score+=ph.includes(' ')?20:10; for(const t of terms) if(n.includes(t)) score+=2; return {st,score};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const list=scored.length?scored:sents.slice(0,4).map(st=>({st,score:1})); const chosen=[]; let total=0; for(const it of list){ if(total+it.st.length>1050&&chosen.length) continue; chosen.push(it.st); total+=it.st.length; if(chosen.length>=4) break;} return chosen.join(' ') || String(c.text||'').slice(0,900);}
 function searchBook(q,catOverride=null,limitN=4){const base=getBase(); const terms=getTerms(q); const phrases=phraseList(q); const cat=catOverride||detectCategory(q); const ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const long=phrases.filter(p=>p.length>=5); const exact=ranked.filter(x=>long.some(p=>normalize((x.c.title||'')+' '+x.c.text).includes(p))); const top=(exact.length?exact:ranked).slice(0,limitN); return {top,terms,phrases,cat};}
 function sourceLine(sources){const unique=[]; for(const s of sources){if(!unique.some(u=>u.page===s.page&&u.title===s.title)) unique.push(s);} return '<div class="chat-source"><strong>Fonte:</strong> '+unique.slice(0,5).map(s=>`Crônicas do Éter, p. ${esc(s.page)}${s.title?` — ${esc(s.title)}`:''}`).join('; ')+'</div>';}
-function recommendationAnswer(q){const nq=normalize(q); const asksRecommendation=/(combina|recomenda|recomend|melhor|build|estilo|variacao|variação|full)/i.test(q); if(!asksRecommendation) return null;
-  const chunks=[]; const sources=[];
-  function addSearch(term,cat){const r=searchBook(term,cat,2); r.top.forEach(x=>{chunks.push(x.c); sources.push({page:x.c.page,title:x.c.title||'Crônicas do Éter'});});}
+function collectSources(chunks){
+  const sources=[];
+  for(const c of chunks||[]) sources.push({page:c.page,title:c.title||'Crônicas do Éter'});
+  return sources;
+}
+function uniqueChunks(chunks){
+  const seen=new Set();
+  const out=[];
+  for(const c of chunks||[]){
+    const key=(c.page||'')+'|'+(c.title||'')+'|'+String(c.text||'').slice(0,80);
+    if(!seen.has(key)){seen.add(key); out.push(c);}
+  }
+  return out;
+}
+function getCategoryChunks(cat,limit=18){
+  const base=getBase();
+  return base.map(c=>({c,score:chunkCatScore(c,cat)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,limit).map(x=>x.c);
+}
+function findNamedChunks(q,limit=8){
+  const r=searchBook(q,detectCategory(q),limit);
+  return r.top.map(x=>x.c);
+}
+function compactExcerpt(c,q){
+  const terms=getTerms(q); const phrases=phraseList(q);
+  return bestExcerpt(c,terms,phrases).replace(/\n+/g,' ').trim();
+}
+function makeInterpretiveAnswer(q,chunks){
+  chunks=uniqueChunks(chunks).slice(0,6);
+  const nq=normalize(q);
+  const asksBest=/(melhor|mais forte|vale a pena|recomenda|combina|build|otimiz|bom para|boa para|qual devo|qual seria)/i.test(q);
+  const asksCompare=/(compar|diferen|versus| vs |entre .* e |melhor .* ou )/i.test(' '+q+' ');
+  const asksHow=/(como montar|como fazer|como criar|estrategia|estratégia|interpretativ|ideia|conceito|funciona na pratica|funciona na prática)/i.test(q);
+  const snippets=chunks.map(c=>({c,ex:compactExcerpt(c,q)})).filter(x=>x.ex);
+  if(!snippets.length) return null;
   let html='';
-  if(nq.includes('ladino')){addSearch('Ladino classe destreza furtividade dano cortante perfurante', 'classe'); addSearch('Elfo raça destreza', 'raca'); addSearch('Humano raça', 'raca'); addSearch('Argoniano raça', 'raca'); html='<p><strong>Para Ladino, eu priorizaria raças que favoreçam mobilidade, furtividade, destreza, percepção ou versatilidade.</strong></p><p>As opções que tendem a combinar melhor são <strong>Elfo</strong>, pela afinidade natural com agilidade e estilo técnico; <strong>Humano</strong>, pela versatilidade geral; e <strong>Argoniano/Sylvan</strong>, se você quiser um ladino mais explorador, furtivo ou ligado a sobrevivência. Se a ideia for dano puro com armas leves, foque talentos de dano cortante/perfurante, furtividade, emboscada e incremento crítico.</p>';}
-  else if(nq.includes('celestial')){addSearch('Celestial raça', 'raca'); addSearch('Paladino classe', 'classe'); addSearch('Clérigo classe', 'classe'); addSearch('Bardo classe', 'classe'); html='<p><strong>Para um Celestial, eu recomendaria classes que aproveitam bem a temática de luz, suporte, fé ou presença sobrenatural.</strong></p><p>As combinações mais naturais são <strong>Paladino</strong>, para um personagem marcial sagrado; <strong>Clérigo</strong>, para cura, símbolos sagrados e orientação divina; e <strong>Bardo</strong>, se você quiser um celestial carismático, inspirador e versátil. Se quiser fugir do óbvio, <strong>Feiticeiro</strong> também funciona bem para uma origem mágica forte.</p>';}
-  else if(nq.includes('full fisico')||nq.includes('fisico')){addSearch('Artes da Guerra Artes de Combate', 'habilidade'); addSearch('Talentos Livres Combatente Ágil Bárbaro Atirador Nato', 'talento'); addSearch('Caminho da Brutalidade Caminho da Agilidade Caminho do Combatente', 'talento'); html='<p><strong>Para um personagem full físico ganhar variação de estilo, eu recomendo diversificar função sem abandonar a base física.</strong></p><p>Você pode adicionar controle físico por manobras, trocar entre armas de força/destreza, usar talentos que melhorem dano cortante, perfurante ou impactante, investir em mobilidade e escolher equipamentos com efeitos utilitários. Outra opção é ter uma subclasse mais técnica ou suporte, mas manter os cálculos principais na classe física principal.</p>';}
-  else {addSearch(q,detectCategory(q)); html='<p><strong>Posso recomendar com base no sistema, mas preciso cruzar raça, classe, talentos, equipamentos e estilo desejado.</strong></p><p>Como regra geral: defina primeiro sua função principal (dano, defesa, suporte, controle ou exploração), depois escolha raça/classe que reforcem essa função e talentos que corrijam fraquezas. Para uma recomendação precisa, diga raça, classe, graduação e estilo de combate desejado.</p>';}
+  if(asksCompare){
+    html+='<p><strong>Comparando pelo que existe na base do sistema:</strong></p>';
+    html+='<p>'+snippets.slice(0,3).map(x=>`<strong>${esc(x.c.title||'Trecho')}</strong>: ${esc(x.ex)}`).join('</p><p>')+'</p>';
+    html+='<p><strong>Leitura prática:</strong> escolha a opção que mais combina com a função que você quer cumprir na mesa. Se a pergunta envolve combate, priorize a opção que fortalece seu atributo principal, tipo de dano, custo de recurso e economia de ações. Se envolve narrativa, priorize coerência de raça, classe, divindade e origem.</p>';
+  } else if(asksBest||asksHow){
+    html+='<p><strong>Minha recomendação interpretativa, usando a base do sistema como apoio:</strong></p>';
+    html+='<p>Eu começaria definindo a função do personagem: dano, defesa, suporte, controle ou exploração. Depois cruzaria isso com os trechos encontrados abaixo. O melhor caminho é aquele que reforça seu atributo principal e evita gastar recursos em coisas que competem pela mesma ação ou pela mesma vitalidade.</p>';
+    html+='<p>'+snippets.slice(0,4).map(x=>`<strong>${esc(x.c.title||'Trecho')}</strong>: ${esc(x.ex)}`).join('</p><p>')+'</p>';
+    html+='<p><strong>Conclusão:</strong> se você quer eficiência, foque em sinergia mecânica; se quer conceito forte, aceite perder um pouco de otimização para manter uma identidade clara no personagem.</p>';
+  } else {
+    return null;
+  }
+  return {html:html+sourceLine(collectSources(chunks)),sources:collectSources(chunks)};
+}
+function recommendationAnswer(q){
+  const nq=normalize(q); const asksRecommendation=/(combina|recomenda|recomend|melhor|build|estilo|variacao|variação|full|vale a pena|bom para|boa para|otimiz)/i.test(q); if(!asksRecommendation) return null;
+  const chunks=[]; const sources=[];
+  function addSearch(term,cat){const r=searchBook(term,cat,3); r.top.forEach(x=>{chunks.push(x.c); sources.push({page:x.c.page,title:x.c.title||'Crônicas do Éter'});});}
+  let html='';
+  if(nq.includes('ladino')){addSearch('Ladino classe destreza furtividade dano cortante perfurante', 'classe'); addSearch('Elfo raça destreza agilidade', 'raca'); addSearch('Humano raça versatilidade', 'raca'); addSearch('Argoniano raça furtividade sobrevivencia', 'raca'); html='<p><strong>Para Ladino, eu priorizaria raças que favoreçam mobilidade, furtividade, destreza, percepção ou versatilidade.</strong></p><p>As opções que tendem a combinar melhor são <strong>Elfo</strong>, pela afinidade natural com agilidade e estilo técnico; <strong>Humano</strong>, pela versatilidade geral; e <strong>Argoniano/Sylvan</strong>, se você quiser um ladino mais explorador, furtivo ou ligado a sobrevivência. Para dano puro com armas leves, foque talentos de dano cortante/perfurante, furtividade, emboscada e incremento crítico.</p>';}
+  else if(nq.includes('celestial')){addSearch('Celestial raça luz carisma divino', 'raca'); addSearch('Paladino classe sagrado', 'classe'); addSearch('Clérigo classe cura símbolo sagrado', 'classe'); addSearch('Bardo classe carisma suporte', 'classe'); html='<p><strong>Para um Celestial, eu recomendaria classes que aproveitam bem luz, suporte, fé ou presença sobrenatural.</strong></p><p>As combinações mais naturais são <strong>Paladino</strong>, para um personagem marcial sagrado; <strong>Clérigo</strong>, para cura e símbolos sagrados; e <strong>Bardo</strong>, se você quiser um celestial carismático, inspirador e versátil. Se quiser fugir do óbvio, <strong>Feiticeiro</strong> também funciona bem para uma origem mágica forte.</p>';}
+  else if(nq.includes('full fisico')||nq.includes('fisico')){addSearch('Artes da Guerra Artes de Combate', 'habilidade'); addSearch('Talentos Livres Combatente Ágil Bárbaro Atirador Nato', 'talento'); addSearch('Caminho da Brutalidade Caminho da Agilidade Caminho do Combatente', 'talento'); html='<p><strong>Para um personagem full físico ganhar variação de estilo, diversifique função sem abandonar a base física.</strong></p><p>Você pode adicionar controle físico por manobras, alternar armas de força/destreza, usar talentos que melhorem dano cortante, perfurante ou impactante, investir em mobilidade e escolher equipamentos com efeitos utilitários. Outra opção é ter uma especialização mais técnica, mantendo os cálculos principais na classe física.</p>';}
+  else {
+    const interp=makeInterpretiveAnswer(q, findNamedChunks(q,8));
+    if(interp) return interp;
+    addSearch(q,detectCategory(q)); html='<p><strong>Posso recomendar com base no sistema, mas a pergunta está ampla.</strong></p><p>Como regra geral: defina primeiro sua função principal (dano, defesa, suporte, controle ou exploração), depois escolha raça/classe que reforcem essa função e talentos que corrijam fraquezas. Para precisão máxima, informe raça, classe, graduação e estilo de combate desejado.</p>';
+  }
   return {html:html+sourceLine(sources), sources};
 }
-function answerFromBook(q){const rec=recommendationAnswer(q); if(rec) return rec; const base=getBase(); if(!base.length) return {html:'A base completa do livro ainda não foi carregada. Recarregue a página e tente novamente.',sources:[]}; const {top,terms,phrases,cat}=searchBook(q,null,cat==='mercado'?5:4); if(!top.length) return {html:'Não encontrei esse conteúdo na base do livro. Tente usar o nome exato do efeito, condição, raça, classe, item ou regra.',sources:[]}; const intros={raca:'Sobre a raça perguntada:',classe:'Sobre a classe perguntada:',talento:'Sobre o talento perguntado:',efeito:'Sobre o efeito perguntado:',condicao:'Sobre a condição perguntada:',mercado:'Sobre o item ou regra de mercado perguntada:',familiar:'Sobre familiares:',habilidade:'Sobre habilidades:'}; const parts=[]; const sources=[]; for(const {c} of top){const ex=bestExcerpt(c,terms,phrases); if(ex&&!parts.some(p=>p.slice(0,80)===ex.slice(0,80))) parts.push(ex); sources.push({page:c.page,title:c.title||'Crônicas do Éter'});} return {html:`<p><strong>${esc(intros[cat]||'Encontrei a seguinte regra no sistema:')}</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceLine(sources)}`, sources};}
+function answerFromBook(q){
+  try{
+    const rec=recommendationAnswer(q); if(rec) return rec;
+    const base=getBase();
+    if(!base.length) return {html:'A base completa do livro ainda não foi carregada. Recarregue a página e tente novamente.',sources:[]};
+    const initialCat=detectCategory(q);
+    const searchLimit=initialCat==='mercado'?5:4;
+    const {top,terms,phrases,cat}=searchBook(q,initialCat,searchLimit);
+    if(!top.length){
+      const broad=base.map(c=>({c,score:scoreChunk(c,getTerms(q),null,phraseList(q))})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,4);
+      if(!broad.length) return {html:'Não encontrei esse conteúdo na base do livro. Tente usar o nome exato do efeito, condição, raça, classe, item ou regra.',sources:[]};
+      const chunks=broad.map(x=>x.c);
+      const interp=makeInterpretiveAnswer(q,chunks);
+      if(interp) return interp;
+      const parts=chunks.map(c=>compactExcerpt(c,q)).filter(Boolean);
+      return {html:`<p><strong>Encontrei trechos possivelmente relacionados:</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceLine(collectSources(chunks))}`,sources:collectSources(chunks)};
+    }
+    const chunks=top.map(x=>x.c);
+    const interp=makeInterpretiveAnswer(q,chunks);
+    if(interp) return interp;
+    const intros={raca:'Sobre a raça perguntada:',classe:'Sobre a classe perguntada:',talento:'Sobre o talento perguntado:',efeito:'Sobre o efeito perguntado:',condicao:'Sobre a condição perguntada:',mercado:'Sobre o item ou regra de mercado perguntada:',familiar:'Sobre familiares:',habilidade:'Sobre habilidades:'};
+    const parts=[]; const sources=[];
+    for(const {c} of top){const ex=bestExcerpt(c,terms,phrases); if(ex&&!parts.some(p=>p.slice(0,80)===ex.slice(0,80))) parts.push(ex); sources.push({page:c.page,title:c.title||'Crônicas do Éter'});}
+    return {html:`<p><strong>${esc(intros[cat]||'Encontrei a seguinte regra no sistema:')}</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceLine(sources)}`, sources};
+  }catch(err){
+    console.error('Erro no assistente:',err);
+    return {html:'O assistente encontrou um erro ao interpretar essa pergunta, mas não travou. Recarregue a página se o problema persistir e tente perguntar com o nome exato da regra, raça, classe, talento ou item.',sources:[]};
+  }
+}
 function addMsg(kind,html){const div=document.createElement('div'); div.className=kind==='user'?'chat-msg-user':'chat-msg-bot'; div.style.padding='.75rem 1rem'; div.style.borderRadius='14px'; div.style.border='1px solid rgba(199,164,92,.28)'; div.style.background=kind==='user'?'rgba(199,164,92,.12)':'rgba(255,255,255,.05)'; div.innerHTML=html; log.appendChild(div); log.scrollTop=log.scrollHeight;}
-async function ask(q){if(!q.trim()) return; addMsg('user',esc(q)); addMsg('bot','Consultando o livro completo...'); const answer=answerFromBook(q); log.lastElementChild.innerHTML=answer.html; input.value='';}
+let answering=false;
+async function ask(q){
+  if(!q.trim()||answering) return;
+  answering=true;
+  askBtn.disabled=true;
+  addMsg('user',esc(q));
+  addMsg('bot','Consultando o livro completo...');
+  try{
+    const answer=answerFromBook(q);
+    log.lastElementChild.innerHTML=answer.html;
+    input.value='';
+  }catch(err){
+    console.error('Erro ao responder:',err);
+    log.lastElementChild.innerHTML='O assistente encontrou um erro inesperado, mas a conversa continua. Tente reformular a pergunta.';
+  }finally{
+    askBtn.disabled=false;
+    answering=false;
+    input.focus();
+  }
+}
 askBtn.addEventListener('click',()=>ask(input.value));
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) ask(input.value);});
 document.querySelectorAll('.quick-question').forEach(b=>b.addEventListener('click',()=>ask(b.dataset.q||b.textContent)));
