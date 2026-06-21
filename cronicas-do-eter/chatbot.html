@@ -79,7 +79,7 @@ let authResolved=false;
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function canUse(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master');}
 function normalize(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
-const STOP=new Set('a o os as de do da dos das e ou para por com sem em no na nos nas um uma uns umas que qual quais como quanto quantos me meu minha sua seu sobre regra regras sistema cronicas eter explique falar diga quero saber'.split(' '));
+const STOP=new Set('a o os as de do da dos das e ou para por com sem em no na nos nas um uma uns umas que qual quais como quanto quantos quando onde porque por que me meu minha sua seu sobre regra regras sistema cronicas eter explique explicar falar diga quero saber existe possuem possui tem faz fazer'.split(' '));
 function getBase(){return Array.isArray(window.CRONICAS_SISTEMA_BASE)?window.CRONICAS_SISTEMA_BASE:[];}
 function getTerms(q){return normalize(q).split(/\s+/).filter(w=>w.length>2&&!STOP.has(w));}
 function phraseList(q){const t=getTerms(q); const out=[]; for(let n=Math.min(5,t.length);n>=1;n--){for(let i=0;i<=t.length-n;i++) out.push(t.slice(i,i+n).join(' '));} return [...new Set(out)].sort((a,b)=>b.length-a.length);}
@@ -103,10 +103,14 @@ function chunkCatScore(c,cat){if(!cat) return 0; const title=normalize(c.title);
   mercado:['mercado','comercio','armas','armaduras','materias','servicos','taberna','animais','bens e posses','foco arcano','instrumentos musicais'],
   familiar:['familiares'], habilidade:['habilidades','criacao de habilidades','evolucao de habilidades','magias','artes']
 }[cat]||[]; return map.reduce((a,w)=>a+((title.includes(w)||text.includes(w))?5:0),0);}
-function scoreChunk(c,terms,cat,phrases){const all=normalize((c.title||'')+' '+(c.text||'')); const title=normalize(c.title||''); let score=chunkCatScore(c,cat); for(const ph of phrases){if(all.includes(ph)) score+=ph.includes(' ')?18:8; if(title.includes(ph)) score+=10;} for(const t of terms){if(all.includes(t)) score+=2; if(title.includes(t)) score+=5;} return score;}
+function scoreChunk(c,terms,cat,phrases){const all=normalize((c.title||'')+' '+(c.text||'')); const title=normalize(c.title||''); let score=chunkCatScore(c,cat); for(const ph of phrases){if(!ph||ph.length<4) continue; if(all.includes(ph)) score+=ph.includes(' ')?22:4; if(title.includes(ph)) score+=ph.includes(' ')?16:8;} for(const t of terms){if(all.includes(t)) score+=2; if(title.includes(t)) score+=7;} const coverage=terms.length?terms.filter(t=>all.includes(t)).length/terms.length:1; if(terms.length>=3&&coverage<0.45) score*=0.35; return score;}
+function extractTarget(q){let nq=normalize(q); nq=nq.replace(/^(qual|quais|quanto|quantos|como|o que|oq|me diga|explique|fale|sabe)\s+/,''); nq=nq.replace(/^(e|é|sao|são)\s+/,''); const m=nq.match(/(?:de|do|da|dos|das)\s+(.+)$/); if(m&&getTerms(m[1]).length) nq=m[1]; return getTerms(nq).filter(t=>!['custo','custos','dano','danos','alcance','efeito','efeitos','teste','recarga','mana','energia','vida','classe','raca','racas','habilidade','talento','item','preco','precos'].includes(t)).join(' ');}
+function isObjectiveQuestion(q){return /(o que|oq|qual|quais|quanto|quantos|custo|dano|alcance|efeito|teste|recarga|preço|preco|lista|possui|tem)/i.test(q)&&!/(melhor|recomenda|build|combina|vale a pena|compar|versus| vs |interpret)/i.test(q);}
+function wantedFields(q){const n=normalize(q); const f=[]; if(/custo|mana|energia|vida/.test(n)) f.push('Custo'); if(/dano/.test(n)) f.push('Dano'); if(/alcance/.test(n)) f.push('Alcance'); if(/teste|cd/.test(n)) f.push('Teste'); if(/recarga|rodada|cooldown/.test(n)) f.push('Recarga'); if(/efeito|faz|funciona/.test(n)) f.push('Efeito'); if(/preco|preço|valor|custa/.test(n)) f.push('Preço'); return f;}
+function preciseSearch(q,limitN=3){const target=extractTarget(q)||normalize(q); const cat=detectCategory(q); const terms=getTerms(target); const phrases=phraseList(target).filter(p=>p.includes(' ')||p.length>=5); const base=getBase(); let ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); if(terms.length>=2){ranked=ranked.filter(x=>{const all=normalize((x.c.title||'')+' '+x.c.text); return terms.filter(t=>all.includes(t)).length>=Math.ceil(terms.length*0.65);});} const exactTitle=ranked.filter(x=>phrases.some(p=>normalize(x.c.title||'').includes(p))); const top=(exactTitle.length?exactTitle:ranked).slice(0,limitN); return {top,terms,phrases,cat,target};}
 function splitSentences(txt){return String(txt||'').split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>18);}
 function bestExcerpt(c,terms,phrases){const sents=splitSentences(c.text); const scored=sents.map(st=>{const n=normalize(st); let score=0; for(const ph of phrases) if(n.includes(ph)) score+=ph.includes(' ')?20:10; for(const t of terms) if(n.includes(t)) score+=2; return {st,score};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const list=scored.length?scored:sents.slice(0,4).map(st=>({st,score:1})); const chosen=[]; let total=0; for(const it of list){ if(total+it.st.length>1050&&chosen.length) continue; chosen.push(it.st); total+=it.st.length; if(chosen.length>=4) break;} return chosen.join(' ') || String(c.text||'').slice(0,900);}
-function searchBook(q,catOverride=null,limitN=4){const base=getBase(); const terms=getTerms(q); const phrases=phraseList(q); const cat=catOverride||detectCategory(q); const ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const long=phrases.filter(p=>p.length>=5); const exact=ranked.filter(x=>long.some(p=>normalize((x.c.title||'')+' '+x.c.text).includes(p))); const top=(exact.length?exact:ranked).slice(0,limitN); return {top,terms,phrases,cat};}
+function searchBook(q,catOverride=null,limitN=4){const base=getBase(); const terms=getTerms(q); const phrases=phraseList(q); const cat=catOverride||detectCategory(q); let ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const long=phrases.filter(p=>p.includes(' ')&&p.length>=8); const exact=ranked.filter(x=>long.some(p=>normalize((x.c.title||'')+' '+x.c.text).includes(p))); const top=(exact.length?exact:ranked).slice(0,limitN); return {top,terms,phrases,cat};}
 function sourceLine(sources){const unique=[]; for(const s of sources){if(!unique.some(u=>u.page===s.page&&u.title===s.title)) unique.push(s);} return '<div class="chat-source"><strong>Fonte:</strong> '+unique.slice(0,5).map(s=>`Crônicas do Éter, p. ${esc(s.page)}${s.title?` — ${esc(s.title)}`:''}`).join('; ')+'</div>';}
 function collectSources(chunks){
   const sources=[];
@@ -172,8 +176,31 @@ function recommendationAnswer(q){
   }
   return {html:html+sourceLine(sources), sources};
 }
+
+function objectiveAnswer(q){
+  if(!isObjectiveQuestion(q)) return null;
+  const r=preciseSearch(q,2);
+  if(!r.top.length) return null;
+  const fields=wantedFields(q);
+  const chunks=r.top.map(x=>x.c);
+  let parts=[];
+  for(const {c} of r.top){
+    let sents=splitSentences(c.text);
+    let picked=[];
+    if(fields.length){
+      picked=sents.filter(st=>fields.some(f=>normalize(st).includes(normalize(f))));
+    }
+    if(!picked.length) picked=sents.filter(st=>r.terms.some(t=>normalize(st).includes(t))).slice(0,3);
+    if(!picked.length) picked=[bestExcerpt(c,r.terms,r.phrases)];
+    const title=c.title?`<strong>${esc(c.title)}</strong>: `:'';
+    parts.push(title+esc(picked.slice(0,3).join(' ')));
+  }
+  return {html:`<p><strong>Resposta direta:</strong></p><p>${parts.join('</p><p>')}</p>${sourceLine(collectSources(chunks))}`,sources:collectSources(chunks)};
+}
+
 function answerFromBook(q){
   try{
+    const obj=objectiveAnswer(q); if(obj) return obj;
     const rec=recommendationAnswer(q); if(rec) return rec;
     const base=getBase();
     if(!base.length) return {html:'A base completa do livro ainda não foi carregada. Recarregue a página e tente novamente.',sources:[]};
