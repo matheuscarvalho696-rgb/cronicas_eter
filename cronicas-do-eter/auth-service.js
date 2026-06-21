@@ -440,6 +440,30 @@ export async function listMyCharacters() {
   return rows.reverse();
 }
 
+
+export async function updateCharacter(characterId, patch = {}) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!characterId) throw new Error("Personagem inválido.");
+  const ref = doc(db, "characters", characterId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Personagem não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) {
+    throw new Error("Você só pode editar seus próprios personagens.");
+  }
+  const safePatch = {
+    ...patch,
+    updatedAt: serverTimestamp()
+  };
+  delete safePatch.id;
+  delete safePatch.ownerUid;
+  delete safePatch.ownerEmail;
+  delete safePatch.createdAt;
+  await updateDoc(ref, safePatch);
+  await createLog("character.updated", { characterId, nome: patch.nome || data.nome || "" });
+}
+
 export async function saveDistribution(distribution) {
   const { db } = getFirebase();
   const user = requireCurrentUser();
@@ -455,12 +479,26 @@ export async function saveDistribution(distribution) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
+  if (distribution.linkedCharacterId) {
+    payload.linkedCharacterId = cleanText(distribution.linkedCharacterId);
+  }
   const ref = await addDoc(collection(db, "distributions"), payload);
   await updateDoc(doc(db, "users", user.uid), {
     "calculator.lastValidation": serverTimestamp(),
     updatedAt: serverTimestamp()
   }).catch(()=>{});
-  await createLog("distribution.saved", { distributionId: ref.id, xpSpent: payload.xpSpent, ptSpent: payload.ptSpent });
+  if (distribution.linkedCharacterId && distribution.characterUpdate) {
+    try {
+      await updateCharacter(distribution.linkedCharacterId, {
+        ...distribution.characterUpdate,
+        "calculator.lastDistributionId": ref.id,
+        "calculator.lastValidation": serverTimestamp()
+      });
+    } catch (err) {
+      console.warn("Não foi possível atualizar o personagem vinculado:", err);
+    }
+  }
+  await createLog("distribution.saved", { distributionId: ref.id, xpSpent: payload.xpSpent, ptSpent: payload.ptSpent, linkedCharacterId: payload.linkedCharacterId || "" });
   return ref.id;
 }
 

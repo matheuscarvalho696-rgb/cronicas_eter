@@ -1263,3 +1263,11 @@ body.auth-approved .sidebar-divider.requires-auth { display: block !important; }
   .top-login-link { font-size: .64rem; padding: .42rem .58rem; margin: 0; }
   .page-header { padding-top: 6.7rem; }
 }
+
+/* Sprint 4 v31 — editor rápido de personagem */
+.character-actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.85rem}
+.character-editor{margin-top:1rem;padding:1rem;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.035)}
+.equipment-manual-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}
+.manual-equip-slot{border:1px dashed var(--border);border-radius:12px;padding:.75rem;background:rgba(0,0,0,.12)}
+.manual-equip-slot h5{margin:.1rem 0 .5rem;color:var(--gold)}
+@media(max-width:720px){.character-actions{flex-direction:column}.character-actions button{width:100%}}

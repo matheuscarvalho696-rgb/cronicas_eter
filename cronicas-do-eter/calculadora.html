@@ -714,6 +714,7 @@ render();
 import { watchAuth, saveDistribution, hasApprovedAccess, listMyCharacters } from './auth-service.js';
 let currentProfile = null;
 let loadedCharacters = [];
+let loadedCharacterIndex = null;
 function slugCalc(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
 function setCurrentByName(name, value){
   const line=[...document.querySelectorAll('.range-line')].find(el => (el.querySelector('.range-name')?.textContent||'').trim().toLowerCase().startsWith(String(name).toLowerCase()));
@@ -734,6 +735,7 @@ const loadBtn=document.getElementById('loadCharacterBtn');
 if(loadBtn){ loadBtn.addEventListener('click',()=>{
   const sel=document.getElementById('loadCharacterSelect'); const c=loadedCharacters[Number(sel?.value)];
   if(!c) return alert('Selecione um personagem salvo.');
+  loadedCharacterIndex = Number(sel.value);
   const pontos=c.simulacao?.pontosAtuais || c.pontosAtuais || {};
   Object.entries(pontos.atributos||{}).forEach(([k,v])=>setCurrentByName(k,v));
   Object.entries(pontos.focos||{}).forEach(([k,v])=>setCurrentByName(k,v));
@@ -745,18 +747,50 @@ if(loadBtn){ loadBtn.addEventListener('click',()=>{
   if(typeof calc==='function') calc();
 });}
 
+
+function getDesiredRowsByCategory(){
+  const attrs=['Vigor','Força','Destreza','Inteligência','Sabedoria','Carisma'];
+  const focos=['Mentalismo','Místico','Domínio','Encantamento','Fortaleza'];
+  const especiais=['Somática','Controle','Recuperação','Raciocínio'];
+  const out={atributos:{},focos:{},especiais:{},regeneracao:0};
+  document.querySelectorAll('.range-line').forEach(line=>{
+    const name=(line.querySelector('.range-name')?.childNodes?.[0]?.textContent || line.querySelector('.range-name')?.textContent || '').trim();
+    const desired=line.querySelector('[data-kind="desired"]');
+    if(!desired || !name) return;
+    const value=Number(desired.value)||0;
+    if(attrs.includes(name)) out.atributos[name]=value;
+    else if(focos.includes(name)) out.focos[name]=value;
+    else if(especiais.includes(name)) out.especiais[name]=value;
+    else if(name.toLowerCase().startsWith('regeneração') || name.toLowerCase().startsWith('regeneracao')) out.regeneracao=value;
+  });
+  return out;
+}
+function buildCharacterUpdateFromDesired(character){
+  const pontos=getDesiredRowsByCategory();
+  const oldSim=character.simulacao || {};
+  return {
+    pontosAtuais:pontos,
+    simulacao:{...oldSim, pontosAtuais:pontos},
+    "calculator.lastAppliedAt": new Date().toISOString()
+  };
+}
+
 window.addEventListener('cronicas:distributionValidated', async (event) => {
   try {
     if (!hasApprovedAccess(currentProfile) || currentProfile.premium !== true) return;
     const xpSpent = Number((document.getElementById('xpSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
     const ptSpent = Number((document.getElementById('ptSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
+    const linkedCharacter = Number.isInteger(loadedCharacterIndex) ? loadedCharacters[loadedCharacterIndex] : null;
+    const characterUpdate = linkedCharacter ? buildCharacterUpdateFromDesired(linkedCharacter) : null;
     await saveDistribution({
       title: 'Distribuição XP/PT - ' + new Date().toLocaleString('pt-BR'),
       xpSpent,
       ptSpent,
       xpLeft: document.getElementById('xpLeft')?.textContent || '0',
       ptLeft: document.getElementById('ptLeft')?.textContent || '0',
-      lines: event.detail?.lines || []
+      lines: event.detail?.lines || [],
+      linkedCharacterId: linkedCharacter?.id || '',
+      characterUpdate
     });
   } catch (err) {
     console.warn('Não foi possível salvar a distribuição:', err);
