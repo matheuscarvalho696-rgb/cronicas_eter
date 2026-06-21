@@ -78,155 +78,109 @@ let authResolved=false;
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function canUse(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master');}
-function normalize(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
-const STOP=new Set('a o os as de do da dos das e ou para por com sem em no na nos nas um uma uns umas que qual quais como quanto quantos quando onde porque por que me meu minha sua seu sobre regra regras sistema cronicas eter explique explicar falar diga quero saber existe possuem possui tem faz fazer'.split(' '));
-function getBase(){return Array.isArray(window.CRONICAS_SISTEMA_BASE)?window.CRONICAS_SISTEMA_BASE:[];}
-function getTerms(q){return normalize(q).split(/\s+/).filter(w=>w.length>2&&!STOP.has(w));}
-function phraseList(q){const t=getTerms(q); const out=[]; for(let n=Math.min(5,t.length);n>=1;n--){for(let i=0;i<=t.length-n;i++) out.push(t.slice(i,i+n).join(' '));} return [...new Set(out)].sort((a,b)=>b.length-a.length);}
-const CATEGORY_HINTS={
-  raca:['raca','racas','anao','argoniano','celestial','daedra','demonio','draconato','elfo','humano','mestico','orc','sylvan','quanti'],
-  classe:['classe','classes','arqueiro','barbaro','bardo','bruxo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
-  talento:['talento','talentos','livre','incomum','raro','lendario'],
-  efeito:['efeito','efeitos','aumento de ataque','aumento de defesa','barreira','blindagem','cegueira','chamas','envenenamento','selamento','silencio','amedrontar','atordoamento'],
-  condicao:['condicao','condicoes','agilidade','camuflagem','confusao','congelamento','coragem','dano agravado','dano penetrante','dano real','dispel','queda','repelimento','sangramento','tormenta','vulnerabilidade'],
-  mercado:['mercado','item','itens','preco','arma','armadura','escudo','anel','colar','racao','ração','pocao','servico','taberna','animal','foco arcano','instrumento musical'],
-  familiar:['familiar','familiares'],
-  habilidade:['habilidade','habilidades','magia','magias','criacao','evolucao','dualidade']
+
+const STOP=new Set('a o os as de do da dos das e ou para por com sem em no na nos nas num numa um uma uns umas que qual quais como quanto quantos quando onde porque por que me meu minha sua seu dele dela sobre regra regras sistema cronicas eter explique explicar falar diga quero saber existe possuem possui tem faz fazer funciona funcionamento'.split(' '));
+const GENERIC_TERMS=new Set('vida mana energia dano danos custo custos efeito efeitos regra regras sistema teste testes alcance classe classes raca racas raça raças habilidade habilidades talento talentos item itens preco preço valor valores nivel níveis nivel níveis graduação graduacao'.split(' '));
+const FIELD_WORDS={
+  vida:['vida','pv','pontos de vida'], mana:['mana'], energia:['energia'], custo:['custo','custos','mana','energia','vida'], dano:['dano','danos'], alcance:['alcance','metros','raio'], teste:['teste','cd','dificuldade'], recarga:['recarga','rodada','turno'], preco:['preco','preço','valor','custa','custam'], efeito:['efeito','efeitos','funciona','faz']
 };
-function detectCategory(q){const nq=normalize(q); let best=null,score=0; for(const [cat,words] of Object.entries(CATEGORY_HINTS)){let s=0; for(const w of words) if(nq.includes(normalize(w))) s++; if(s>score){score=s;best=cat;}} return best;}
-function chunkCatScore(c,cat){if(!cat) return 0; const title=normalize(c.title); const text=normalize(c.text); const map={
-  raca:['as racas','anao','argoniano','celestial','daedra','demonio','draconato','elfo','humano','mestico','orc','sylvan','quanti'],
-  classe:['classes e especializacoes','caracteristicas exclusivas da classe','arqueiro','barbaro','bardo','bruxo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
-  talento:['os talentos','talentos livres','talentos incomuns','talentos raros','talentos lendarios'],
-  efeito:['efeitos combate','efeitos positivos','efeitos negativos'],
-  condicao:['condicoes'],
-  mercado:['mercado','comercio','armas','armaduras','materias','servicos','taberna','animais','bens e posses','foco arcano','instrumentos musicais'],
-  familiar:['familiares'], habilidade:['habilidades','criacao de habilidades','evolucao de habilidades','magias','artes']
-}[cat]||[]; return map.reduce((a,w)=>a+((title.includes(w)||text.includes(w))?5:0),0);}
-function scoreChunk(c,terms,cat,phrases){const all=normalize((c.title||'')+' '+(c.text||'')); const title=normalize(c.title||''); let score=chunkCatScore(c,cat); for(const ph of phrases){if(!ph||ph.length<4) continue; if(all.includes(ph)) score+=ph.includes(' ')?22:4; if(title.includes(ph)) score+=ph.includes(' ')?16:8;} for(const t of terms){if(all.includes(t)) score+=2; if(title.includes(t)) score+=7;} const coverage=terms.length?terms.filter(t=>all.includes(t)).length/terms.length:1; if(terms.length>=3&&coverage<0.45) score*=0.35; return score;}
-function extractTarget(q){let nq=normalize(q); nq=nq.replace(/^(qual|quais|quanto|quantos|como|o que|oq|me diga|explique|fale|sabe)\s+/,''); nq=nq.replace(/^(e|é|sao|são)\s+/,''); const m=nq.match(/(?:de|do|da|dos|das)\s+(.+)$/); if(m&&getTerms(m[1]).length) nq=m[1]; return getTerms(nq).filter(t=>!['custo','custos','dano','danos','alcance','efeito','efeitos','teste','recarga','mana','energia','vida','classe','raca','racas','habilidade','talento','item','preco','precos'].includes(t)).join(' ');}
-function isObjectiveQuestion(q){return /(o que|oq|qual|quais|quanto|quantos|custo|dano|alcance|efeito|teste|recarga|preço|preco|lista|possui|tem)/i.test(q)&&!/(melhor|recomenda|build|combina|vale a pena|compar|versus| vs |interpret)/i.test(q);}
-function wantedFields(q){const n=normalize(q); const f=[]; if(/custo|mana|energia|vida/.test(n)) f.push('Custo'); if(/dano/.test(n)) f.push('Dano'); if(/alcance/.test(n)) f.push('Alcance'); if(/teste|cd/.test(n)) f.push('Teste'); if(/recarga|rodada|cooldown/.test(n)) f.push('Recarga'); if(/efeito|faz|funciona/.test(n)) f.push('Efeito'); if(/preco|preço|valor|custa/.test(n)) f.push('Preço'); return f;}
-function preciseSearch(q,limitN=3){const target=extractTarget(q)||normalize(q); const cat=detectCategory(q); const terms=getTerms(target); const phrases=phraseList(target).filter(p=>p.includes(' ')||p.length>=5); const base=getBase(); let ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); if(terms.length>=2){ranked=ranked.filter(x=>{const all=normalize((x.c.title||'')+' '+x.c.text); return terms.filter(t=>all.includes(t)).length>=Math.ceil(terms.length*0.65);});} const exactTitle=ranked.filter(x=>phrases.some(p=>normalize(x.c.title||'').includes(p))); const top=(exactTitle.length?exactTitle:ranked).slice(0,limitN); return {top,terms,phrases,cat,target};}
-function splitSentences(txt){return String(txt||'').split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>18);}
-function bestExcerpt(c,terms,phrases){const sents=splitSentences(c.text); const scored=sents.map(st=>{const n=normalize(st); let score=0; for(const ph of phrases) if(n.includes(ph)) score+=ph.includes(' ')?20:10; for(const t of terms) if(n.includes(t)) score+=2; return {st,score};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const list=scored.length?scored:sents.slice(0,4).map(st=>({st,score:1})); const chosen=[]; let total=0; for(const it of list){ if(total+it.st.length>1050&&chosen.length) continue; chosen.push(it.st); total+=it.st.length; if(chosen.length>=4) break;} return chosen.join(' ') || String(c.text||'').slice(0,900);}
-function searchBook(q,catOverride=null,limitN=4){const base=getBase(); const terms=getTerms(q); const phrases=phraseList(q); const cat=catOverride||detectCategory(q); let ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const long=phrases.filter(p=>p.includes(' ')&&p.length>=8); const exact=ranked.filter(x=>long.some(p=>normalize((x.c.title||'')+' '+x.c.text).includes(p))); const top=(exact.length?exact:ranked).slice(0,limitN); return {top,terms,phrases,cat};}
-function sourceLine(sources){const unique=[]; for(const s of sources){if(!unique.some(u=>u.page===s.page&&u.title===s.title)) unique.push(s);} return '<div class="chat-source"><strong>Fonte:</strong> '+unique.slice(0,5).map(s=>`Crônicas do Éter, p. ${esc(s.page)}${s.title?` — ${esc(s.title)}`:''}`).join('; ')+'</div>';}
-function collectSources(chunks){
-  const sources=[];
-  for(const c of chunks||[]) sources.push({page:c.page,title:c.title||'Crônicas do Éter'});
-  return sources;
+const CATEGORY_HINTS={
+  raca:['raca','racas','raça','raças','anao','anão','argoniano','celestial','daedra','demonio','demônio','draconato','elfo','humano','mestico','mestiço','orc','sylvan','quanti'],
+  classe:['classe','classes','arqueiro','barbaro','bárbaro','bardo','bruxo','clerigo','clérigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
+  talento:['talento','talentos'],
+  efeito:['efeito','efeitos','cegueira','chamas','envenenamento','selamento','silencio','silêncio','amedrontar','atordoamento','sangramento','congelamento','queda','vulnerabilidade','barreira','blindagem'],
+  mercado:['mercado','item','itens','preco','preço','arma','armadura','escudo','anel','colar','racao','ração','pocao','poção','servico','serviço','taberna','animal','foco arcano','instrumento musical'],
+  familiar:['familiar','familiares'],
+  habilidade:['habilidade','habilidades','magia','magias','criacao','criação','evolucao','evolução','dualidade'],
+  divindade:['deus','deusa','deuses','divindade','divindades','thaloren','xyr','lysander','thalnor']
+};
+const CATEGORY_TITLE_HINTS={
+  raca:['racas','raças','anao','argoniano','celestial','daedra','demonio','draconato','elfo','humano','mestico','orc','sylvan','quanti'],
+  classe:['classe','classes','especializacoes','arqueiro','barbaro','bardo','bruxo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
+  talento:['talento','talentos'],
+  efeito:['efeitos','condicoes','condições','cegueira','sangramento','selamento','silencio'],
+  mercado:['mercado','comercio','comércio','armas','armaduras','servicos','serviços','taberna','animais','bens','posses','foco arcano','instrumentos'],
+  familiar:['familiar','familiares'], habilidade:['habilidades','magias','artes','criacao de habilidades','criação de habilidades'], divindade:['divindades','deuses','panteao','panteão']
+};
+function getBase(){return Array.isArray(window.CRONICAS_SISTEMA_BASE)?window.CRONICAS_SISTEMA_BASE:[];}
+function normalize(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+function getTerms(q){return normalize(q).split(/\s+/).filter(w=>w.length>2&&!STOP.has(w));}
+function phraseList(q){const t=getTerms(q); const out=[]; for(let n=Math.min(6,t.length);n>=2;n--){for(let i=0;i<=t.length-n;i++) out.push(t.slice(i,i+n).join(' '));} return [...new Set(out)].sort((a,b)=>b.length-a.length);}
+function detectCategory(q){const nq=normalize(q); let best=null,score=0; for(const [cat,words] of Object.entries(CATEGORY_HINTS)){let s=0; for(const w of words){const nw=normalize(w); if(nq===nw||nq.includes(' '+nw+' ')||nq.startsWith(nw+' ')||nq.endsWith(' '+nw)) s+=nw.includes(' ')?3:1;} if(s>score){score=s;best=cat;}} return best;}
+function isChunkInCategory(c,cat){if(!cat) return true; const title=normalize(c.title||''); const text=normalize(c.text||'').slice(0,800); const hints=CATEGORY_TITLE_HINTS[cat]||[]; return hints.some(h=>title.includes(normalize(h))||text.includes(normalize(h)));}
+function wantedFields(q){const n=normalize(q); const out=[]; for(const [field,words] of Object.entries(FIELD_WORDS)){if(words.some(w=>n.includes(normalize(w)))) out.push(field);} return [...new Set(out)];}
+function isInterpretive(q){return /(melhor|recomenda|recomend|build|combina|vale a pena|compar|versus| vs |interpret|opini|estrateg|sinerg|criar personagem|fazer personagem|qual raça|qual raca)/i.test(q);}
+function isObjectiveQuestion(q){return !isInterpretive(q) && /(o que|oq|qual|quais|quanto|quantos|custo|dano|alcance|efeito|teste|recarga|preço|preco|valor|custa|lista|possui|tem|como funciona|como calcular|vida|mana|energia)/i.test(q);}
+function extractTarget(q){
+  let terms=getTerms(q).filter(t=>!GENERIC_TERMS.has(t));
+  const phrases=phraseList(q).filter(p=>p.split(' ').some(t=>!GENERIC_TERMS.has(t)));
+  if(phrases.length) return phrases[0];
+  return terms.join(' ');
 }
-function uniqueChunks(chunks){
-  const seen=new Set();
-  const out=[];
-  for(const c of chunks||[]){
-    const key=(c.page||'')+'|'+(c.title||'')+'|'+String(c.text||'').slice(0,80);
-    if(!seen.has(key)){seen.add(key); out.push(c);}
+function sentenceSplit(txt){return String(txt||'').replace(/\s+/g,' ').split(/(?<=[.!?])\s+|(?=\b(?:Efeito|Custo|Dano|Alcance|Teste|Recarga|Preço|Vida|Mana|Energia)\s*:)/i).map(x=>x.trim()).filter(x=>x.length>10);}
+function sourceLine(sources){const unique=[]; for(const s of sources||[]){if(!unique.some(u=>u.page===s.page&&u.title===s.title)) unique.push(s);} if(!unique.length) return ''; return '<div class="chat-source"><strong>Fonte:</strong> '+unique.slice(0,4).map(s=>`Crônicas do Éter, p. ${esc(s.page)}${s.title?` — ${esc(s.title)}`:''}`).join('; ')+'</div>';}
+function collectSources(chunks){return (chunks||[]).map(c=>({page:c.page,title:c.title||'Crônicas do Éter'}));}
+function uniqueChunks(chunks){const seen=new Set(),out=[]; for(const c of chunks||[]){const key=(c.page||'')+'|'+(c.title||'')+'|'+String(c.text||'').slice(0,90); if(!seen.has(key)){seen.add(key); out.push(c);}} return out;}
+function scoreChunk(c,route){
+  const all=normalize((c.title||'')+' '+(c.text||'')); const title=normalize(c.title||'');
+  const target=route.target; const terms=route.terms; const phrases=route.phrases; let score=0;
+  if(route.cat && isChunkInCategory(c,route.cat)) score+=18; else if(route.cat) score-=22;
+  if(target){if(title.includes(target)) score+=90; if(all.includes(target)) score+=60;}
+  for(const ph of phrases){if(ph.length<5) continue; if(title.includes(ph)) score+=45; else if(all.includes(ph)) score+=25;}
+  let hit=0; for(const t of terms){if(all.includes(t)){hit++; score+=GENERIC_TERMS.has(t)?1:8;} if(title.includes(t)) score+=GENERIC_TERMS.has(t)?2:20;}
+  if(route.fields.length){const fieldHit=route.fields.some(f=>(FIELD_WORDS[f]||[f]).some(w=>all.includes(normalize(w)))); if(fieldHit) score+=20;}
+  if(terms.filter(t=>!GENERIC_TERMS.has(t)).length>=2 && hit<2) score-=35;
+  return score;
+}
+function buildRoute(q){
+  const cat=detectCategory(q); const fields=wantedFields(q); const phrases=phraseList(q); const target=extractTarget(q); const terms=getTerms((target||q));
+  const mode=isInterpretive(q)?'interpretive':(isObjectiveQuestion(q)?'objective':'direct');
+  return {q,cat,fields,phrases,target,terms,mode};
+}
+function searchPrecise(route,limit=3){
+  let base=getBase();
+  if(route.cat) base=base.filter(c=>isChunkInCategory(c,route.cat));
+  const ranked=base.map(c=>({c,score:scoreChunk(c,route)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  const best=ranked[0]?.score||0;
+  const top=ranked.filter(x=>x.score>=Math.max(18,best*0.45)).slice(0,limit);
+  return top;
+}
+function pickSentences(c,route,max=3){
+  const sents=sentenceSplit(c.text); const target=route.target; const targetTerms=route.terms.filter(t=>!GENERIC_TERMS.has(t));
+  const scored=sents.map(st=>{const n=normalize(st); let score=0; if(target&&n.includes(target)) score+=40; for(const t of targetTerms) if(n.includes(t)) score+=12; for(const f of route.fields){for(const w of FIELD_WORDS[f]||[f]) if(n.includes(normalize(w))) score+=18;} if(!route.fields.length&&route.terms.some(t=>n.includes(t))) score+=8; return {st,score};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  const chosen=(scored.length?scored:sents.slice(0,2).map(st=>({st,score:1}))).slice(0,max).map(x=>x.st);
+  return chosen.join(' ');
+}
+function directAnswer(q){
+  const route=buildRoute(q);
+  const onlyGeneric=route.terms.length>0 && route.terms.every(t=>GENERIC_TERMS.has(t));
+  if(onlyGeneric && !route.cat){
+    return {html:'<p><strong>Preciso de um alvo mais específico.</strong></p><p>A palavra pesquisada é ampla demais no sistema. Pergunte, por exemplo: <em>vida do Guerreiro</em>, <em>custo de Corte Espacial</em>, <em>como calcular vida</em> ou <em>efeito Sangramento</em>. Assim eu não busco tudo que apenas contém essa palavra.</p>',sources:[]};
   }
-  return out;
-}
-function getCategoryChunks(cat,limit=18){
-  const base=getBase();
-  return base.map(c=>({c,score:chunkCatScore(c,cat)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,limit).map(x=>x.c);
-}
-function findNamedChunks(q,limit=8){
-  const r=searchBook(q,detectCategory(q),limit);
-  return r.top.map(x=>x.c);
-}
-function compactExcerpt(c,q){
-  const terms=getTerms(q); const phrases=phraseList(q);
-  return bestExcerpt(c,terms,phrases).replace(/\n+/g,' ').trim();
-}
-function makeInterpretiveAnswer(q,chunks){
-  chunks=uniqueChunks(chunks).slice(0,6);
-  const nq=normalize(q);
-  const asksBest=/(melhor|mais forte|vale a pena|recomenda|combina|build|otimiz|bom para|boa para|qual devo|qual seria)/i.test(q);
-  const asksCompare=/(compar|diferen|versus| vs |entre .* e |melhor .* ou )/i.test(' '+q+' ');
-  const asksHow=/(como montar|como fazer|como criar|estrategia|estratégia|interpretativ|ideia|conceito|funciona na pratica|funciona na prática)/i.test(q);
-  const snippets=chunks.map(c=>({c,ex:compactExcerpt(c,q)})).filter(x=>x.ex);
-  if(!snippets.length) return null;
-  let html='';
-  if(asksCompare){
-    html+='<p><strong>Comparando pelo que existe na base do sistema:</strong></p>';
-    html+='<p>'+snippets.slice(0,3).map(x=>`<strong>${esc(x.c.title||'Trecho')}</strong>: ${esc(x.ex)}`).join('</p><p>')+'</p>';
-    html+='<p><strong>Leitura prática:</strong> escolha a opção que mais combina com a função que você quer cumprir na mesa. Se a pergunta envolve combate, priorize a opção que fortalece seu atributo principal, tipo de dano, custo de recurso e economia de ações. Se envolve narrativa, priorize coerência de raça, classe, divindade e origem.</p>';
-  } else if(asksBest||asksHow){
-    html+='<p><strong>Minha recomendação interpretativa, usando a base do sistema como apoio:</strong></p>';
-    html+='<p>Eu começaria definindo a função do personagem: dano, defesa, suporte, controle ou exploração. Depois cruzaria isso com os trechos encontrados abaixo. O melhor caminho é aquele que reforça seu atributo principal e evita gastar recursos em coisas que competem pela mesma ação ou pela mesma vitalidade.</p>';
-    html+='<p>'+snippets.slice(0,4).map(x=>`<strong>${esc(x.c.title||'Trecho')}</strong>: ${esc(x.ex)}`).join('</p><p>')+'</p>';
-    html+='<p><strong>Conclusão:</strong> se você quer eficiência, foque em sinergia mecânica; se quer conceito forte, aceite perder um pouco de otimização para manter uma identidade clara no personagem.</p>';
-  } else {
-    return null;
+  const limit=route.mode==='objective'?2:3; const top=searchPrecise(route,limit);
+  if(!top.length || (top[0].score<35 && route.target)){
+    return {html:'<p><strong>Não encontrei uma resposta precisa.</strong></p><p>Para evitar trazer trechos aleatórios do livro, não vou responder só por palavra parecida. Use o nome exato da regra, classe, raça, item, efeito, talento ou habilidade.</p>',sources:[]};
   }
-  return {html:html+sourceLine(collectSources(chunks)),sources:collectSources(chunks)};
+  const chunks=uniqueChunks(top.map(x=>x.c));
+  const parts=chunks.map(c=>{const title=c.title?`<strong>${esc(c.title)}</strong>: `:''; return title+esc(pickSentences(c,route,route.mode==='objective'?2:3));}).filter(Boolean);
+  const label=route.mode==='objective'?'Resposta direta':'Encontrei isto no sistema';
+  return {html:`<p><strong>${label}:</strong></p><p>${parts.join('</p><p>')}</p>${sourceLine(collectSources(chunks))}`,sources:collectSources(chunks)};
 }
-function recommendationAnswer(q){
-  const nq=normalize(q); const asksRecommendation=/(combina|recomenda|recomend|melhor|build|estilo|variacao|variação|full|vale a pena|bom para|boa para|otimiz)/i.test(q); if(!asksRecommendation) return null;
-  const chunks=[]; const sources=[];
-  function addSearch(term,cat){const r=searchBook(term,cat,3); r.top.forEach(x=>{chunks.push(x.c); sources.push({page:x.c.page,title:x.c.title||'Crônicas do Éter'});});}
-  let html='';
-  if(nq.includes('ladino')){addSearch('Ladino classe destreza furtividade dano cortante perfurante', 'classe'); addSearch('Elfo raça destreza agilidade', 'raca'); addSearch('Humano raça versatilidade', 'raca'); addSearch('Argoniano raça furtividade sobrevivencia', 'raca'); html='<p><strong>Para Ladino, eu priorizaria raças que favoreçam mobilidade, furtividade, destreza, percepção ou versatilidade.</strong></p><p>As opções que tendem a combinar melhor são <strong>Elfo</strong>, pela afinidade natural com agilidade e estilo técnico; <strong>Humano</strong>, pela versatilidade geral; e <strong>Argoniano/Sylvan</strong>, se você quiser um ladino mais explorador, furtivo ou ligado a sobrevivência. Para dano puro com armas leves, foque talentos de dano cortante/perfurante, furtividade, emboscada e incremento crítico.</p>';}
-  else if(nq.includes('celestial')){addSearch('Celestial raça luz carisma divino', 'raca'); addSearch('Paladino classe sagrado', 'classe'); addSearch('Clérigo classe cura símbolo sagrado', 'classe'); addSearch('Bardo classe carisma suporte', 'classe'); html='<p><strong>Para um Celestial, eu recomendaria classes que aproveitam bem luz, suporte, fé ou presença sobrenatural.</strong></p><p>As combinações mais naturais são <strong>Paladino</strong>, para um personagem marcial sagrado; <strong>Clérigo</strong>, para cura e símbolos sagrados; e <strong>Bardo</strong>, se você quiser um celestial carismático, inspirador e versátil. Se quiser fugir do óbvio, <strong>Feiticeiro</strong> também funciona bem para uma origem mágica forte.</p>';}
-  else if(nq.includes('full fisico')||nq.includes('fisico')){addSearch('Artes da Guerra Artes de Combate', 'habilidade'); addSearch('Talentos Livres Combatente Ágil Bárbaro Atirador Nato', 'talento'); addSearch('Caminho da Brutalidade Caminho da Agilidade Caminho do Combatente', 'talento'); html='<p><strong>Para um personagem full físico ganhar variação de estilo, diversifique função sem abandonar a base física.</strong></p><p>Você pode adicionar controle físico por manobras, alternar armas de força/destreza, usar talentos que melhorem dano cortante, perfurante ou impactante, investir em mobilidade e escolher equipamentos com efeitos utilitários. Outra opção é ter uma especialização mais técnica, mantendo os cálculos principais na classe física.</p>';}
-  else {
-    const interp=makeInterpretiveAnswer(q, findNamedChunks(q,8));
-    if(interp) return interp;
-    addSearch(q,detectCategory(q)); html='<p><strong>Posso recomendar com base no sistema, mas a pergunta está ampla.</strong></p><p>Como regra geral: defina primeiro sua função principal (dano, defesa, suporte, controle ou exploração), depois escolha raça/classe que reforcem essa função e talentos que corrijam fraquezas. Para precisão máxima, informe raça, classe, graduação e estilo de combate desejado.</p>';
-  }
-  return {html:html+sourceLine(sources), sources};
+function interpretiveAnswer(q){
+  const route=buildRoute(q); if(route.mode!=='interpretive') return null;
+  const categories=[]; if(route.cat) categories.push(route.cat); if(/raca|raça|combina|classe|build|personagem/i.test(q)){categories.push('raca','classe','talento');}
+  const chunks=[]; for(const cat of [...new Set(categories)]){const r={...route,cat}; searchPrecise(r,3).forEach(x=>chunks.push(x.c));}
+  if(!chunks.length) return directAnswer(q);
+  const unique=uniqueChunks(chunks).slice(0,5);
+  const snippets=unique.map(c=>`<strong>${esc(c.title||'Trecho')}</strong>: ${esc(pickSentences(c,route,2))}`);
+  return {html:`<p><strong>Interpretação com base no sistema:</strong></p><p>Para essa pergunta, eu não vou listar tudo que tem palavras parecidas; vou cruzar apenas os trechos mais próximos da intenção.</p><p>${snippets.join('</p><p>')}</p><p><strong>Conclusão:</strong> escolha a opção que mais reforça a função principal do personagem e evite misturar recursos que competem pela mesma ação, atributo ou vitalidade.</p>${sourceLine(collectSources(unique))}`,sources:collectSources(unique)};
 }
-
-function objectiveAnswer(q){
-  if(!isObjectiveQuestion(q)) return null;
-  const r=preciseSearch(q,2);
-  if(!r.top.length) return null;
-  const fields=wantedFields(q);
-  const chunks=r.top.map(x=>x.c);
-  let parts=[];
-  for(const {c} of r.top){
-    let sents=splitSentences(c.text);
-    let picked=[];
-    if(fields.length){
-      picked=sents.filter(st=>fields.some(f=>normalize(st).includes(normalize(f))));
-    }
-    if(!picked.length) picked=sents.filter(st=>r.terms.some(t=>normalize(st).includes(t))).slice(0,3);
-    if(!picked.length) picked=[bestExcerpt(c,r.terms,r.phrases)];
-    const title=c.title?`<strong>${esc(c.title)}</strong>: `:'';
-    parts.push(title+esc(picked.slice(0,3).join(' ')));
-  }
-  return {html:`<p><strong>Resposta direta:</strong></p><p>${parts.join('</p><p>')}</p>${sourceLine(collectSources(chunks))}`,sources:collectSources(chunks)};
-}
-
 function answerFromBook(q){
   try{
-    const obj=objectiveAnswer(q); if(obj) return obj;
-    const rec=recommendationAnswer(q); if(rec) return rec;
-    const base=getBase();
-    if(!base.length) return {html:'A base completa do livro ainda não foi carregada. Recarregue a página e tente novamente.',sources:[]};
-    const initialCat=detectCategory(q);
-    const searchLimit=initialCat==='mercado'?5:4;
-    const {top,terms,phrases,cat}=searchBook(q,initialCat,searchLimit);
-    if(!top.length){
-      const broad=base.map(c=>({c,score:scoreChunk(c,getTerms(q),null,phraseList(q))})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,4);
-      if(!broad.length) return {html:'Não encontrei esse conteúdo na base do livro. Tente usar o nome exato do efeito, condição, raça, classe, item ou regra.',sources:[]};
-      const chunks=broad.map(x=>x.c);
-      const interp=makeInterpretiveAnswer(q,chunks);
-      if(interp) return interp;
-      const parts=chunks.map(c=>compactExcerpt(c,q)).filter(Boolean);
-      return {html:`<p><strong>Encontrei trechos possivelmente relacionados:</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceLine(collectSources(chunks))}`,sources:collectSources(chunks)};
-    }
-    const chunks=top.map(x=>x.c);
-    const interp=makeInterpretiveAnswer(q,chunks);
-    if(interp) return interp;
-    const intros={raca:'Sobre a raça perguntada:',classe:'Sobre a classe perguntada:',talento:'Sobre o talento perguntado:',efeito:'Sobre o efeito perguntado:',condicao:'Sobre a condição perguntada:',mercado:'Sobre o item ou regra de mercado perguntada:',familiar:'Sobre familiares:',habilidade:'Sobre habilidades:'};
-    const parts=[]; const sources=[];
-    for(const {c} of top){const ex=bestExcerpt(c,terms,phrases); if(ex&&!parts.some(p=>p.slice(0,80)===ex.slice(0,80))) parts.push(ex); sources.push({page:c.page,title:c.title||'Crônicas do Éter'});}
-    return {html:`<p><strong>${esc(intros[cat]||'Encontrei a seguinte regra no sistema:')}</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceLine(sources)}`, sources};
-  }catch(err){
-    console.error('Erro no assistente:',err);
-    return {html:'O assistente encontrou um erro ao interpretar essa pergunta, mas não travou. Recarregue a página se o problema persistir e tente perguntar com o nome exato da regra, raça, classe, talento ou item.',sources:[]};
-  }
+    if(!getBase().length) return {html:'A base completa do livro ainda não foi carregada. Recarregue a página e tente novamente.',sources:[]};
+    const interp=interpretiveAnswer(q); if(interp) return interp;
+    return directAnswer(q);
+  }catch(err){console.error('Erro no assistente:',err); return {html:'O assistente encontrou um erro ao interpretar essa pergunta, mas não travou. Tente usar o nome exato da regra, raça, classe, talento, habilidade ou item.',sources:[]};}
 }
 function addMsg(kind,html){const div=document.createElement('div'); div.className=kind==='user'?'chat-msg-user':'chat-msg-bot'; div.style.padding='.75rem 1rem'; div.style.borderRadius='14px'; div.style.border='1px solid rgba(199,164,92,.28)'; div.style.background=kind==='user'?'rgba(199,164,92,.12)':'rgba(255,255,255,.05)'; div.innerHTML=html; log.appendChild(div); log.scrollTop=log.scrollHeight;}
 let answering=false;
@@ -235,7 +189,7 @@ async function ask(q){
   answering=true;
   askBtn.disabled=true;
   addMsg('user',esc(q));
-  addMsg('bot','Consultando o livro completo...');
+  addMsg('bot','Interpretando a pergunta e filtrando a base...');
   try{
     const answer=answerFromBook(q);
     log.lastElementChild.innerHTML=answer.html;
