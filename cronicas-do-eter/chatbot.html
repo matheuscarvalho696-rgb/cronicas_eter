@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+  <link href="styles.css" rel="stylesheet"/>
+  <title>Assistente do Sistema — Crônicas do Éter</title>
+</head>
+<body>
+<nav class="topbar">
+  <button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button>
+  <a class="nav-brand" href="index.html">Crônicas do Éter</a>
+</nav>
+<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar">
+  <div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div>
+  <a href="index.html">Início</a>
+  <a href="racas.html">Raças</a>
+  <a href="classes.html">Classes</a>
+  <a href="especializacoes.html">Especializações</a>
+  <a href="talentos.html">Talentos</a>
+  <a href="crie-personagem.html">Crie seu Personagem</a>
+  <a href="habilidades.html">Habilidades</a>
+  <a href="familiar.html">Familiar</a>
+  <a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
+  <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
+  <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
+  <a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
+  <div class="sidebar-divider requires-auth">Ferramentas</div>
+  <a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a>
+  <a class="requires-auth" href="mercado.html">Mercado</a>
+  <a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
+</aside>
+<div id="stars"></div>
+<header class="page-header">
+  <p class="breadcrumb"><a href="index.html">Início</a> / Assistente do Sistema</p>
+  <p class="page-eyebrow">Área Premium</p>
+  <h1 class="page-title">Assistente do Sistema</h1>
+  <p class="page-intro">Um assistente inicial para tirar dúvidas rápidas sobre regras, criação de personagem, XP/PT, familiares, mercado e combate.</p>
+</header>
+<section>
+  <div class="container">
+    <div id="chatAccessBox" class="note reveal">Carregando acesso...</div>
+    <div id="chatApp" class="reveal" hidden>
+      <div class="lore-block">
+        <h3>Chat de Regras</h3>
+        <p>Digite uma dúvida. Esta primeira versão usa uma base local de regras e respostas guiadas. Futuramente podemos conectar uma IA com todo o documento do sistema.</p>
+        <div class="chat-panel" id="chatLog" style="display:flex;flex-direction:column;gap:.75rem;margin:1rem 0;max-height:460px;overflow:auto;padding:.8rem;border:1px solid rgba(199,164,92,.25);border-radius:16px;background:rgba(0,0,0,.18)"></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:.75rem;align-items:end">
+          <div><label for="chatQuestion">Sua dúvida</label><textarea id="chatQuestion" class="ether-input" rows="3" placeholder="Ex: como calculo vida? como funciona concentração? quanto custa talento raro?"></textarea></div>
+          <button class="btn-primary" id="askBtn" type="button">Responder</button>
+        </div>
+      </div>
+      <div class="info-grid">
+        <button class="btn-secondary quick-question" type="button" data-q="Como calcular vida mana e energia?">Vitalidades</button>
+        <button class="btn-secondary quick-question" type="button" data-q="Como funciona a calculadora de XP e PT?">XP/PT</button>
+        <button class="btn-secondary quick-question" type="button" data-q="Como funcionam talentos?">Talentos</button>
+        <button class="btn-secondary quick-question" type="button" data-q="Como funciona familiar?">Familiares</button>
+      </div>
+    </div>
+  </div>
+</section>
+<footer><span>Crônicas do Éter</span> — Plataforma do Jogador</footer>
+<script src="script.js"></script>
+<script type="module" src="auth-widget.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script type="module">
+import { watchAuth, hasApprovedAccess } from './auth-service.js';
+const accessBox=document.getElementById('chatAccessBox');
+const app=document.getElementById('chatApp');
+const log=document.getElementById('chatLog');
+const input=document.getElementById('chatQuestion');
+const askBtn=document.getElementById('askBtn');
+function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function canUse(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master');}
+const KB=[
+  {keys:['vida','mana','energia','vitalidade','vigor','força','inteligência'], title:'Cálculo de vitalidades', answer:'A vitalidade é calculada pela soma de: vitalidade inicial da raça + vitalidade inicial da classe principal + vitalidade por nível da classe principal + bônus do atributo correspondente + bônus dos focos + bônus da graduação + talentos relevantes. A subclasse não altera vitalidades. Vigor afeta Vida, Força afeta Energia e Inteligência afeta Mana.'},
+  {keys:['xp','pt','distribuição','calculadora','validar'], title:'Distribuição de XP/PT', answer:'Na Calculadora XP/PT, o valor Atual representa a ficha existente e o Desejado representa onde o personagem quer chegar. Ao validar com um personagem carregado, os valores desejados de atributos, focos, atributos especiais e regeneração passam a ser os novos valores atuais do personagem. A validação também deve aparecer em Minhas Distribuições.'},
+  {keys:['talento','talentos','livre','classe','incomum','raro','lendário'], title:'Talentos', answer:'Talentos representam vantagens permanentes. Existem talentos livres, talentos de classe, talentos incomuns, raros e lendários. Alguns possuem níveis evolutivos. No criador de personagem, os talentos devem ser filtrados pelos talentos livres e pelas classes escolhidas.'},
+  {keys:['familiar','familiares','habilidade de familiar'], title:'Familiares', answer:'Familiares são companheiros vinculados ao personagem. O sistema permite montar o familiar, gerar habilidades de familiar por graduação e salvar familiares na conta. A ferramenta de familiar permanece acessível também para visitantes, mas salvar exige login.'},
+  {keys:['mercado','arma','armadura','equipamento','resistência','caf','car','acerto'], title:'Equipamentos e combate', answer:'Armas podem conceder bônus de acerto e dano. Armaduras podem conceder CAF, CAR e resistência. A resistência base simulada usa Vigor/2 somado ao bônus da armadura. Focos arcanos e instrumentos musicais também contam como equipamentos selecionáveis.'},
+  {keys:['concentração','concentracao','conjuração','conjuracao','ação','acao'], title:'Concentração e ações', answer:'Concentração ocorre quando uma habilidade exige mais ações do que o personagem possui disponíveis. Apenas uma habilidade pode ser concentrada por vez. Sofrer dano pode exigir teste de Sabedoria para manter concentração. Ação de Conjuração é limitada a uma por rodada.'},
+  {keys:['efeito','condição','condicao','positivo','negativo','status'], title:'Efeitos e condições', answer:'Efeitos positivos fortalecem o personagem, efeitos negativos enfraquecem e condições representam estados especiais. Efeitos iguais não acumulam, versões superiores substituem inferiores, e condições geralmente não são anuladas por imunidades comuns.'}
+];
+function findAnswer(q){
+  const text=q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  let best=null,score=0;
+  for(const item of KB){
+    const s=item.keys.reduce((acc,k)=> text.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,''))?acc+1:acc,0);
+    if(s>score){score=s;best=item;}
+  }
+  if(best) return `<strong>${esc(best.title)}</strong><br>${esc(best.answer)}`;
+  return 'Ainda não encontrei uma resposta exata na base local. Tente perguntar usando palavras-chave como: vitalidade, XP/PT, talentos, familiar, mercado, concentração, efeitos ou condições.';
+}
+function addMsg(kind,html){
+  const div=document.createElement('div');
+  div.className=kind==='user'?'chat-msg-user':'chat-msg-bot';
+  div.style.padding='.75rem 1rem'; div.style.borderRadius='14px'; div.style.border='1px solid rgba(199,164,92,.28)'; div.style.background=kind==='user'?'rgba(199,164,92,.12)':'rgba(255,255,255,.05)';
+  div.innerHTML=html;
+  log.appendChild(div); log.scrollTop=log.scrollHeight;
+}
+function ask(q){ if(!q.trim()) return; addMsg('user',esc(q)); addMsg('bot',findAnswer(q)); input.value=''; }
+askBtn.addEventListener('click',()=>ask(input.value));
+input.addEventListener('keydown',e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ ask(input.value); }});
+document.querySelectorAll('.quick-question').forEach(b=>b.addEventListener('click',()=>ask(b.dataset.q||b.textContent)));
+watchAuth(({profile})=>{
+  if(!canUse(profile)){ accessBox.innerHTML='<strong>Acesso premium necessário.</strong> Entre com uma conta premium, mestre ou admin para usar o assistente.'; app.hidden=true; return; }
+  accessBox.hidden=true; app.hidden=false;
+  if(!log.dataset.started){ addMsg('bot','Olá! Sou o Assistente do Sistema. Pergunte sobre regras, personagem, XP/PT, talentos, familiar ou equipamentos.'); log.dataset.started='1'; }
+});
+</script>
+</body>
+</html>

@@ -74,6 +74,7 @@
   <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a>
   <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
   <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
+  <a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="active requires-auth" href="calculadora.html">Calculadora XP/PT</a>
   <a class="requires-auth" href="mercado.html">Mercado</a>
@@ -698,6 +699,9 @@ function validateAndExport(){
   const distributionLines = buildDistributionLines();
   openDistributionPage(distributionLines);
   window.dispatchEvent(new CustomEvent('cronicas:distributionValidated', { detail: { lines: distributionLines } }));
+  if (typeof window.cronicasSaveValidatedDistribution === 'function') {
+    window.cronicasSaveValidatedDistribution(distributionLines).catch(err => console.warn('Não foi possível registrar a distribuição:', err));
+  }
 }
 
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
@@ -775,9 +779,16 @@ function buildCharacterUpdateFromDesired(character){
   };
 }
 
-window.addEventListener('cronicas:distributionValidated', async (event) => {
+
+let savingDistribution = false;
+function hasPremiumToolAccess(profile){
+  return hasApprovedAccess(profile) && (profile.premium === true || profile.role === 'admin' || profile.role === 'master');
+}
+async function persistValidatedDistribution(lines){
+  if (savingDistribution) return;
+  savingDistribution = true;
   try {
-    if (!hasApprovedAccess(currentProfile) || currentProfile.premium !== true) return;
+    if (!hasPremiumToolAccess(currentProfile)) return;
     const xpSpent = Number((document.getElementById('xpSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
     const ptSpent = Number((document.getElementById('ptSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
     const linkedCharacter = Number.isInteger(loadedCharacterIndex) ? loadedCharacters[loadedCharacterIndex] : null;
@@ -788,14 +799,17 @@ window.addEventListener('cronicas:distributionValidated', async (event) => {
       ptSpent,
       xpLeft: document.getElementById('xpLeft')?.textContent || '0',
       ptLeft: document.getElementById('ptLeft')?.textContent || '0',
-      lines: event.detail?.lines || [],
+      lines: lines || [],
       linkedCharacterId: linkedCharacter?.id || '',
       characterUpdate
     });
   } catch (err) {
     console.warn('Não foi possível salvar a distribuição:', err);
+  } finally {
+    savingDistribution = false;
   }
-});
+}
+window.cronicasSaveValidatedDistribution = persistValidatedDistribution;
 </script>
 </body>
 </html>
