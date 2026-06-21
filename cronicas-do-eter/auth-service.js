@@ -914,6 +914,32 @@ export async function deleteRoll20Import(importId) {
 // ========================================================
 // CÓDIGO DE ACESSO POR E-MAIL
 // ========================================================
+async function loadEmailJsBrowserSdk() {
+  if (window.emailjs && typeof window.emailjs.send === 'function') return window.emailjs;
+
+  await new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-cronicas-emailjs]');
+    if (existing) {
+      existing.addEventListener('load', resolve, { once: true });
+      existing.addEventListener('error', reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    script.async = true;
+    script.dataset.cronicasEmailjs = 'true';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Não foi possível carregar o SDK do EmailJS.'));
+    document.head.appendChild(script);
+  });
+
+  if (!window.emailjs || typeof window.emailjs.send !== 'function') {
+    throw new Error('SDK do EmailJS indisponível após carregamento.');
+  }
+  return window.emailjs;
+}
+
 async function sendInviteEmailViaEmailJS({ email, nome, code }) {
   const mod = await import('./email-config.js').catch(() => null);
   if (!mod || !mod.isEmailConfigured || !mod.isEmailConfigured()) {
@@ -923,29 +949,20 @@ async function sendInviteEmailViaEmailJS({ email, nome, code }) {
   const cfg = mod.emailConfig;
   const templateParams = {
     to_email: normalizeEmail(email),
-    email: normalizeEmail(email),
     name: String(nome || 'Jogador').trim(),
-    to_name: String(nome || 'Jogador').trim(),
-    invite_code: String(code || '').trim(),
-    system_name: 'Crônicas do Éter',
-    expires_in: '30 minutos'
+    invite_code: String(code || '').trim()
   };
 
-  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      service_id: cfg.serviceId,
-      template_id: cfg.templateId,
-      user_id: cfg.publicKey,
-      public_key: cfg.publicKey,
-      template_params: templateParams
-    })
-  });
+  if (!templateParams.to_email) throw new Error('E-mail de destino inválido.');
+  if (!templateParams.invite_code) throw new Error('Código de convite inválido.');
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error('Não foi possível enviar o e-mail pelo EmailJS. ' + text);
+  try {
+    const emailjs = await loadEmailJsBrowserSdk();
+    if (typeof emailjs.init === 'function') emailjs.init({ publicKey: cfg.publicKey });
+    await emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
+  } catch (err) {
+    const detail = err?.text || err?.message || String(err || 'erro desconhecido');
+    throw new Error('Não foi possível enviar o e-mail pelo EmailJS. ' + detail);
   }
 }
 
