@@ -16,11 +16,11 @@
 <section class="auth-card">
 <p class="section-label">Acesso dos Jogadores</p>
 <h1 class="auth-heading">Entrar no Éter</h1>
-<p class="auth-copy">Para criar uma conta, primeiro solicite um código por e-mail. Depois use esse código na aba Criar conta. Visitantes ainda podem consultar o conteúdo público e montar familiares.</p>
+<p class="auth-copy">Crie sua conta, receba um código no e-mail informado e digite o código para liberar o acesso.</p>
 <div class="auth-tabs">
 <button class="auth-tab active" data-auth-tab="login">Entrar</button>
 <button class="auth-tab" data-auth-tab="register">Criar conta</button>
-<button class="auth-tab" data-auth-tab="request-code">Receber código</button>
+<button class="auth-tab hidden" data-auth-tab="verify" id="verifyTabButton">Validar código</button>
 </div>
 <div id="firebaseWarning" class="auth-warning hidden"></div>
 <form id="loginForm" class="auth-form">
@@ -29,31 +29,31 @@
 <button class="btn-primary full" type="submit">Entrar</button>
 <button class="link-button" type="button" id="forgotPassword">Esqueci minha senha</button>
 </form>
-<form id="requestCodeForm" class="auth-form hidden">
-<label>Nome do jogador<input type="text" id="requestName" autocomplete="name"/></label>
-<label>E-mail para receber o código<input type="email" id="requestEmail" autocomplete="email"/></label>
-<button class="btn-primary full" type="submit">Enviar código por e-mail</button>
-<p class="auth-hint">O código será enviado para o e-mail informado. Se o envio ainda não estiver configurado, o administrador precisará configurar <code>email-config.js</code>.</p>
-</form>
 <form id="registerForm" class="auth-form hidden">
 <label>Nome do jogador<input type="text" id="registerName" required autocomplete="name"/></label>
 <label>E-mail<input type="email" id="registerEmail" required autocomplete="email"/></label>
 <label>Senha<input type="password" id="registerPassword" required minlength="6" autocomplete="new-password"/></label>
-<label>Código de acesso<input type="text" id="inviteCode" required placeholder="Ex: CRONICAS2026 ou ETER-XXXX"/></label>
-<button class="btn-primary full" type="submit">Criar Conta</button>
+<button class="btn-primary full" type="submit">Criar conta e enviar código</button>
+<p class="auth-hint">Após criar a conta, enviaremos um código para o e-mail informado. O campo de código ficará disponível em seguida.</p>
+</form>
+<form id="verifyForm" class="auth-form hidden">
+<label>Código recebido por e-mail<input type="text" id="emailCode" autocomplete="one-time-code" inputmode="numeric" placeholder=""/></label>
+<button class="btn-primary full" type="submit">Validar código</button>
+<button class="link-button" type="button" id="resendCode">Reenviar código</button>
 </form>
 <p id="authMessage" class="auth-message"></p>
 </section>
 </main>
 <script type="module">
-import { isAuthConfigured, login, registerWithInvite, resetPassword, watchAuth, requestInviteCodeByEmail } from './auth-service.js';
+import { isAuthConfigured, login, resetPassword, watchAuth, registerWithEmailCode, verifyRegistrationCode, resendEmailVerificationCode, hasApprovedAccess } from './auth-service.js';
 
 const params = new URLSearchParams(location.search);
 const redirect = params.get('redirect') || 'perfil.html';
 const tabs = document.querySelectorAll('.auth-tab');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
-const requestCodeForm = document.getElementById('requestCodeForm');
+const verifyForm = document.getElementById('verifyForm');
+const verifyTabButton = document.getElementById('verifyTabButton');
 const msg = document.getElementById('authMessage');
 const warning = document.getElementById('firebaseWarning');
 
@@ -62,7 +62,7 @@ function setTab(tab) {
   tabs.forEach(b => b.classList.toggle('active', b.dataset.authTab === tab));
   loginForm.classList.toggle('hidden', tab !== 'login');
   registerForm.classList.toggle('hidden', tab !== 'register');
-  requestCodeForm.classList.toggle('hidden', tab !== 'request-code');
+  verifyForm.classList.toggle('hidden', tab !== 'verify');
   setMessage('');
 }
 tabs.forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.authTab)));
@@ -72,8 +72,14 @@ if (!isAuthConfigured()) {
   warning.textContent = 'Firebase ainda não configurado. Preencha firebase-config.js antes de usar login real.';
 }
 
-watchAuth(({ user, configured }) => {
-  if (configured && user) window.location.href = redirect;
+watchAuth(({ user, profile, configured }) => {
+  if (configured && user && profile && !hasApprovedAccess(profile)) {
+    verifyTabButton.classList.remove('hidden');
+    setTab('verify');
+    setMessage('Conta criada. Digite o código enviado para seu e-mail.', 'success');
+    return;
+  }
+  if (configured && user && hasApprovedAccess(profile)) window.location.href = redirect;
 });
 
 loginForm.addEventListener('submit', async (e) => {
@@ -81,7 +87,6 @@ loginForm.addEventListener('submit', async (e) => {
   try {
     setMessage('Entrando...');
     await login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
-    window.location.href = redirect;
   } catch (err) {
     setMessage(err.message || 'Não foi possível entrar.', 'error');
   }
@@ -90,33 +95,44 @@ loginForm.addEventListener('submit', async (e) => {
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    setMessage('Criando conta...');
-    await registerWithInvite({
+    setMessage('Criando conta e enviando código...');
+    const result = await registerWithEmailCode({
       nome: document.getElementById('registerName').value.trim(),
       email: document.getElementById('registerEmail').value.trim(),
-      senha: document.getElementById('registerPassword').value,
-      inviteCode: document.getElementById('inviteCode').value.trim()
+      senha: document.getElementById('registerPassword').value
     });
-    setMessage('Conta criada com sucesso. Redirecionando...', 'success');
-    setTimeout(() => window.location.href = redirect, 700);
+    if (result.requiresCode) {
+      verifyTabButton.classList.remove('hidden');
+      setTab('verify');
+      setMessage('Código enviado por e-mail. Verifique sua caixa de entrada e spam.', 'success');
+    } else {
+      setMessage('Conta criada com sucesso. Redirecionando...', 'success');
+      setTimeout(() => window.location.href = redirect, 700);
+    }
   } catch (err) {
     setMessage(err.message || 'Não foi possível criar a conta.', 'error');
   }
 });
 
-requestCodeForm.addEventListener('submit', async (e) => {
+verifyForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    setMessage('Gerando código e enviando e-mail...');
-    await requestInviteCodeByEmail({
-      nome: document.getElementById('requestName').value.trim(),
-      email: document.getElementById('requestEmail').value.trim()
-    });
-    setMessage('Código enviado por e-mail. Verifique sua caixa de entrada e spam.', 'success');
-    document.getElementById('registerEmail').value = document.getElementById('requestEmail').value.trim();
-    setTab('register');
+    setMessage('Validando código...');
+    await verifyRegistrationCode(document.getElementById('emailCode').value.trim());
+    setMessage('Código validado. Redirecionando...', 'success');
+    setTimeout(() => window.location.href = redirect, 700);
   } catch (err) {
-    setMessage(err.message || 'Não foi possível enviar o código.', 'error');
+    setMessage(err.message || 'Não foi possível validar o código.', 'error');
+  }
+});
+
+document.getElementById('resendCode').addEventListener('click', async () => {
+  try {
+    setMessage('Reenviando código...');
+    await resendEmailVerificationCode();
+    setMessage('Novo código enviado por e-mail.', 'success');
+  } catch (err) {
+    setMessage(err.message || 'Não foi possível reenviar o código.', 'error');
   }
 });
 

@@ -255,6 +255,116 @@ export async function registerWithInvite({ nome, email, senha, inviteCode }) {
   return cred.user;
 }
 
+function buildPendingProfile(user, nome = "") {
+  const base = buildInitialProfile(user, nome, "EMAIL-CODE");
+  const isBootstrapAdmin = isBootstrapAdminEmail(user.email);
+  return {
+    ...base,
+    role: isBootstrapAdmin ? "admin" : "player",
+    status: isBootstrapAdmin ? "approved" : "pending",
+    premium: isBootstrapAdmin,
+    account: {
+      ...(base.account || {}),
+      emailCodeRequired: !isBootstrapAdmin,
+      emailVerifiedByCode: isBootstrapAdmin,
+      bootstrapAdmin: isBootstrapAdmin
+    }
+  };
+}
+
+function makeEmailVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function createEmailVerificationForUser(user, nome = "") {
+  const { db } = getFirebase();
+  const code = makeEmailVerificationCode();
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  await setDoc(doc(db, "emailVerifications", user.uid), {
+    uid: user.uid,
+    email: normalizeEmail(user.email || ""),
+    nome: String(nome || user.displayName || "Jogador").trim(),
+    code,
+    status: "pending",
+    attempts: 0,
+    expiresAt,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return { code, expiresAt };
+}
+
+export async function registerWithEmailCode({ nome, email, senha }) {
+  const cleanName = String(nome || "").trim();
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanName) throw new Error("Informe o nome do jogador.");
+  if (!cleanEmail) throw new Error("Informe um e-mail válido.");
+
+  const { auth, db } = getFirebase();
+  const cred = await createUserWithEmailAndPassword(auth, cleanEmail, senha);
+  await updateProfile(cred.user, { displayName: cleanName }).catch(() => {});
+
+  const profile = buildPendingProfile(cred.user, cleanName);
+  await setDoc(doc(db, "users", cred.user.uid), profile);
+
+  if (profile.status === "approved") {
+    await createLog("auth.register.bootstrap_admin", { uid: cred.user.uid, email: cleanEmail });
+    return { user: cred.user, requiresCode: false };
+  }
+
+  const verification = await createEmailVerificationForUser(cred.user, cleanName);
+  await sendInviteEmailViaEmailJS({ email: cleanEmail, nome: cleanName, code: verification.code });
+  await createLog("auth.email_code_sent", { uid: cred.user.uid, email: cleanEmail });
+  return { user: cred.user, requiresCode: true, expiresAt: verification.expiresAt };
+}
+
+export async function resendEmailVerificationCode() {
+  const { auth } = getFirebase();
+  const user = auth.currentUser;
+  if (!user) throw new Error("Crie a conta ou entre antes de reenviar o código.");
+  const profile = await getUserProfile(user.uid);
+  if (profile?.status === "approved") throw new Error("Esta conta já está aprovada.");
+  const nome = profile?.nome || user.displayName || "Jogador";
+  const verification = await createEmailVerificationForUser(user, nome);
+  await sendInviteEmailViaEmailJS({ email: user.email, nome, code: verification.code });
+  await createLog("auth.email_code_resent", { uid: user.uid, email: normalizeEmail(user.email || "") });
+  return verification;
+}
+
+export async function verifyRegistrationCode(code) {
+  const { auth, db } = getFirebase();
+  const user = auth.currentUser;
+  if (!user) throw new Error("Crie a conta ou entre antes de validar o código.");
+  const provided = String(code || "").trim();
+  if (!provided) throw new Error("Digite o código recebido por e-mail.");
+
+  const ref = doc(db, "emailVerifications", user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Nenhum código foi encontrado para esta conta. Peça um novo código.");
+  const data = snap.data();
+  if (data.status === "verified") throw new Error("Este código já foi validado.");
+  if (data.expiresAt && Date.now() > Date.parse(data.expiresAt)) {
+    await updateDoc(ref, { status: "expired", updatedAt: serverTimestamp() }).catch(() => {});
+    throw new Error("Este código expirou. Peça um novo código.");
+  }
+  if (Number(data.attempts || 0) >= 5) throw new Error("Muitas tentativas incorretas. Peça um novo código.");
+  if (String(data.code || "").trim() !== provided) {
+    await updateDoc(ref, { attempts: Number(data.attempts || 0) + 1, updatedAt: serverTimestamp() }).catch(() => {});
+    throw new Error("Código incorreto.");
+  }
+
+  await updateDoc(ref, { status: "verified", verifiedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  await updateDoc(doc(db, "users", user.uid), {
+    status: "approved",
+    premium: true,
+    "account.emailVerifiedByCode": true,
+    "account.emailCodeRequired": false,
+    updatedAt: serverTimestamp()
+  });
+  await createLog("auth.email_code_verified", { uid: user.uid, email: normalizeEmail(user.email || "") });
+  return true;
+}
+
 export async function login(email, senha) {
   const { auth } = getFirebase();
   const cred = await signInWithEmailAndPassword(auth, email, senha);

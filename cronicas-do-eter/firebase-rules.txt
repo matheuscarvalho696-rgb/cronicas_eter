@@ -58,7 +58,7 @@ service cloud.firestore {
       allow create: if isSelf(userId) && (
         (
           request.resource.data.role == 'player'
-          && request.resource.data.status == 'approved'
+          && request.resource.data.status in ['pending', 'approved']
         )
         ||
         (
@@ -75,12 +75,22 @@ service cloud.firestore {
         && !('status' in request.resource.data.diff(resource.data).changedKeys())
         && !('premium' in request.resource.data.diff(resource.data).changedKeys());
 
+      // Permite que o próprio usuário finalize a validação por código de e-mail.
+      allow update: if isSelf(userId)
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'approved'
+        && request.resource.data.premium == true;
+
       allow update: if isSelf(userId)
         && isBootstrapAdminEmail()
         && request.resource.data.role == 'admin'
         && request.resource.data.status == 'approved';
 
       allow update, delete: if isAdmin();
+    }
+
+    match /emailVerifications/{userId} {
+      allow create, read, update, delete: if isSelf(userId) || isAdmin();
     }
 
     match /logs/{docId} {
