@@ -580,6 +580,152 @@ export async function deleteFamiliar(familiarId) {
   await createLog("familiar.deleted", { familiarId, nome: data.nome || "" });
 }
 
+
+
+// ========================================================
+// MESAS ROLL20 — LINKS E IMPORTAÇÕES SELETIVAS
+// ========================================================
+function cleanUrl(value) {
+  const url = cleanText(value);
+  if (!url) return "";
+  return url;
+}
+
+function cleanRoll20Image(value) {
+  return cleanText(value).slice(0, 2000);
+}
+
+function normalizeRoll20Items(items, kind) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, index) => ({
+    kind,
+    sourceId: cleanText(item.id || item.sourceId || item.roll20Id || `${kind}-${Date.now()}-${index}`),
+    name: cleanText(item.name || item.nome || item.title || item.titulo, kind === "character" ? "Personagem sem nome" : "Folheto sem título"),
+    bio: cleanText(item.bio || item.biografia || item.gmnotes || item.content || item.conteudo),
+    imageUrl: cleanRoll20Image(item.imageUrl || item.avatar || item.imgsrc || item.image || item.imagem),
+    tags: Array.isArray(item.tags) ? item.tags.map(cleanText).filter(Boolean) : [],
+    visible: item.visible !== false,
+    raw: item.raw || {}
+  })).filter(item => item.name || item.bio || item.imageUrl);
+}
+
+export async function saveRoll20Table(table) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const payload = {
+    ownerUid: user.uid,
+    ownerEmail: normalizeEmail(user.email || ""),
+    name: cleanText(table.name, "Mesa sem nome"),
+    roll20Url: cleanUrl(table.roll20Url),
+    campaignId: cleanText(table.campaignId || table.roll20Id),
+    notes: cleanText(table.notes),
+    status: cleanText(table.status, "active"),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, "roll20Tables"), payload);
+  await createLog("roll20.table_saved", { tableId: ref.id, name: payload.name });
+  return ref.id;
+}
+
+export async function listMyRoll20Tables() {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const q = query(collection(db, "roll20Tables"), where("ownerUid", "==", user.uid));
+  const snap = await getDocs(q);
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
+
+export async function deleteRoll20Table(tableId) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!tableId) throw new Error("Mesa inválida.");
+  const ref = doc(db, "roll20Tables", tableId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Mesa não encontrada.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar suas próprias mesas.");
+  await deleteDoc(ref);
+  await createLog("roll20.table_deleted", { tableId, name: data.name || "" });
+}
+
+export async function importRoll20Selection({ tableId, campaignId, characters = [], handouts = [] }) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const normalizedCharacters = normalizeRoll20Items(characters, "character");
+  const normalizedHandouts = normalizeRoll20Items(handouts, "handout");
+  const allItems = [...normalizedCharacters, ...normalizedHandouts];
+  if (!allItems.length) throw new Error("Selecione pelo menos um personagem ou folheto para importar.");
+
+  const savedIds = [];
+  for (const item of allItems) {
+    const payload = {
+      ownerUid: user.uid,
+      ownerEmail: normalizeEmail(user.email || ""),
+      tableId: cleanText(tableId),
+      campaignId: cleanText(campaignId),
+      kind: item.kind,
+      sourceId: item.sourceId,
+      name: item.name,
+      bio: item.bio,
+      imageUrl: item.imageUrl,
+      tags: item.tags,
+      visible: item.visible,
+      importedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+    const ref = await addDoc(collection(db, "roll20Imports"), payload);
+    savedIds.push(ref.id);
+  }
+  await createLog("roll20.selection_imported", { tableId: cleanText(tableId), total: savedIds.length });
+  return savedIds;
+}
+
+export async function listMyRoll20Imports() {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  const q = query(collection(db, "roll20Imports"), where("ownerUid", "==", user.uid));
+  const snap = await getDocs(q);
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.reverse();
+}
+
+export async function updateRoll20Import(importId, patch = {}) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!importId) throw new Error("Registro inválido.");
+  const ref = doc(db, "roll20Imports", importId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Registro não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode editar seus próprios registros.");
+  const safePatch = {
+    name: patch.name !== undefined ? cleanText(patch.name, data.name || "") : data.name,
+    bio: patch.bio !== undefined ? cleanText(patch.bio) : data.bio,
+    imageUrl: patch.imageUrl !== undefined ? cleanRoll20Image(patch.imageUrl) : data.imageUrl,
+    visible: patch.visible !== undefined ? Boolean(patch.visible) : data.visible,
+    updatedAt: serverTimestamp()
+  };
+  await updateDoc(ref, safePatch);
+  await createLog("roll20.import_updated", { importId, name: safePatch.name || "" });
+}
+
+export async function deleteRoll20Import(importId) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!importId) throw new Error("Registro inválido.");
+  const ref = doc(db, "roll20Imports", importId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Registro não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios registros.");
+  await deleteDoc(ref);
+  await createLog("roll20.import_deleted", { importId, name: data.name || "" });
+}
+
 // ========================================================
 // CÓDIGO DE ACESSO POR E-MAIL
 // ========================================================
