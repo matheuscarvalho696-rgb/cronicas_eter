@@ -1271,3 +1271,4 @@ body.auth-approved .sidebar-divider.requires-auth { display: block !important; }
 .manual-equip-slot{border:1px dashed var(--border);border-radius:12px;padding:.75rem;background:rgba(0,0,0,.12)}
 .manual-equip-slot h5{margin:.1rem 0 .5rem;color:var(--gold)}
 @media(max-width:720px){.character-actions{flex-direction:column}.character-actions button{width:100%}}
+.chat-source{margin-top:1rem;padding-top:.75rem;border-top:1px solid rgba(199,164,92,.25);font-size:.95rem;color:var(--muted, #b9acc8)}
