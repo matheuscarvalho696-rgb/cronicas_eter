@@ -579,3 +579,57 @@ export async function deleteFamiliar(familiarId) {
   await deleteDoc(ref);
   await createLog("familiar.deleted", { familiarId, nome: data.nome || "" });
 }
+
+// ========================================================
+// CÓDIGO DE ACESSO POR E-MAIL
+// ========================================================
+async function sendInviteEmailViaEmailJS({ email, nome, code }) {
+  const mod = await import('./email-config.js').catch(() => null);
+  if (!mod || !mod.isEmailConfigured || !mod.isEmailConfigured()) {
+    throw new Error('Envio de e-mail ainda não configurado. Configure email-config.js com EmailJS.');
+  }
+
+  const cfg = mod.emailConfig;
+  const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service_id: cfg.serviceId,
+      template_id: cfg.templateId,
+      user_id: cfg.publicKey,
+      template_params: {
+        to_email: normalizeEmail(email),
+        to_name: String(nome || 'Jogador').trim(),
+        invite_code: code,
+        system_name: 'Crônicas do Éter'
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error('Não foi possível enviar o e-mail pelo EmailJS. ' + text);
+  }
+}
+
+export async function requestInviteCodeByEmail({ nome, email }) {
+  const { db } = getFirebase();
+  const cleanEmail = normalizeEmail(email);
+  const cleanName = String(nome || 'Jogador').trim();
+  if (!cleanEmail) throw new Error('Informe um e-mail válido.');
+  if (!cleanName) throw new Error('Informe o nome do jogador.');
+
+  const code = makeInviteCode();
+  await setDoc(doc(db, 'inviteCodes', code), {
+    code,
+    status: 'active',
+    source: 'email-request',
+    targetEmail: cleanEmail,
+    targetName: cleanName,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  await sendInviteEmailViaEmailJS({ email: cleanEmail, nome: cleanName, code });
+  return code;
+}

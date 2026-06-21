@@ -34,7 +34,16 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isAdmin();
 
-      allow create, delete: if isAdmin();
+      // Admin pode criar códigos manualmente. Visitantes podem criar apenas códigos gerados pelo fluxo de e-mail.
+      allow create: if isAdmin() || (
+        !signedIn()
+        && request.resource.data.code == codeId
+        && request.resource.data.status == 'active'
+        && request.resource.data.source == 'email-request'
+        && request.resource.data.targetEmail is string
+        && request.resource.data.targetName is string
+      );
+      allow delete: if isAdmin();
 
       // Admin pode editar; usuário autenticado pode apenas marcar o próprio código como usado no cadastro.
       allow update: if isAdmin() || (

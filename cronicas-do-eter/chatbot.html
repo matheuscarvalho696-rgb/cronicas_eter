@@ -74,140 +74,60 @@ const app=document.getElementById('chatApp');
 const log=document.getElementById('chatLog');
 const input=document.getElementById('chatQuestion');
 const askBtn=document.getElementById('askBtn');
+let authResolved=false;
+
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function canUse(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master');}
-const STOPWORDS=new Set(['qual','quais','como','sobre','para','uma','umas','uns','dos','das','que','isso','esse','essa','este','esta','ele','ela','eles','elas','com','sem','por','de','do','da','em','no','na','nos','nas','e','ou','ao','aos','me','meu','minha','suas','sua','regra','regras','sistema','crônicas','eter','é','são','foi','tem','tenho','diga','explique']);
-const CATEGORY_HINTS={
-  raca:['raça','racas','anão','anao','argoniano','celestial','daedra','demônio','demonio','draconato','elfo','humano','mestiço','mestico','orc','sylvan','quanti'],
-  classe:['classe','classes','arqueiro','bárbaro','barbaro','bardo','bruxo','clérigo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
-  talento:['talento','talentos','livre','incomum','raro','lendário','lendario'],
-  efeito:['efeito','efeitos','aumento','barreira','blindagem','velocidade','amedrontar','atordoamento','cegueira','chamas','envenenamento','selamento','silêncio','silencio'],
-  condicao:['condição','condicao','condições','condicoes','agilidade','camuflagem','confusão','confusao','congelamento','coragem','dispel','queda','repelimento','sangramento','tormenta','vulnerabilidade','dano real','dano penetrante','dano agravado'],
-  mercado:['item','itens','mercado','preço','preco','ração','racao','arma','armadura','foco','instrumento','poção','pocao','serviço','servico','taberna','animal','anel','colar','escudo'],
-  familiar:['familiar','familiares'],
-  habilidade:['habilidade','habilidades','magia','magias','criação','criacao','evolução','evolucao']
-};
-function normalizeSearchText(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
-function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-function terms(q){return normalizeSearchText(q).split(/\s+/).filter(w=>w.length>2&&!STOPWORDS.has(w));}
-function detectCategory(q){
-  const nq=normalizeSearchText(q);
-  let best=null,score=0;
-  for(const [cat,words] of Object.entries(CATEGORY_HINTS)){
-    const s=words.reduce((a,w)=>a+(nq.includes(normalizeSearchText(w))?1:0),0);
-    if(s>score){score=s;best=cat;}
-  }
-  return best;
-}
-function chunkCategoryScore(chunk, cat){
-  if(!cat) return 0;
-  const title=normalizeSearchText(chunk.title||'');
-  const txt=normalizeSearchText(chunk.text||'');
-  const bonuses={
-    raca:['as racas','anao','argoniano','celestial','daedra','demonio','draconato','elfo','humano','mestico','orc','sylvan','quanti'],
-    classe:['classes e especializacoes','caracteristicas exclusivas da classe','arqueiro','barbaro','bardo','bruxo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
-    talento:['os talentos','talentos livres','talentos incomuns','talentos raros','talentos lendarios'],
-    efeito:['efeitos combate','efeitos positivos','efeitos negativos'],
-    condicao:['condicoes'],
-    mercado:['mercado','comercio','armas','armaduras','materias','servicos','taberna','animais','bens e posses'],
-    familiar:['familiares'],
-    habilidade:['habilidades','criacao de habilidades','evolucao de habilidades','magias','artes']
-  }[cat]||[];
-  return bonuses.reduce((a,b)=>a+((title.includes(b)||txt.includes(b))?4:0),0);
-}
-function exactPhraseCandidates(q){
-  const nq=normalizeSearchText(q);
-  const candidates=[];
-  const quoted=(q.match(/["“”']([^"“”']+)["“”']/g)||[]).map(x=>x.replace(/["“”']/g,''));
-  quoted.forEach(x=>candidates.push(normalizeSearchText(x)));
-  const t=terms(q);
-  for(let n=Math.min(4,t.length); n>=1; n--){
-    for(let i=0;i<=t.length-n;i++){ candidates.push(t.slice(i,i+n).join(' ')); }
-  }
-  return [...new Set(candidates)].filter(x=>x.length>2).sort((a,b)=>b.length-a.length);
-}
+function normalize(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+const STOP=new Set('a o os as de do da dos das e ou para por com sem em no na nos nas um uma uns umas que qual quais como quanto quantos me meu minha sua seu sobre regra regras sistema cronicas eter explique falar diga quero saber'.split(' '));
 function getBase(){return Array.isArray(window.CRONICAS_SISTEMA_BASE)?window.CRONICAS_SISTEMA_BASE:[];}
-function scoreChunk(c,qTerms,cat,phrases){
-  const text=normalizeSearchText((c.title||'')+' '+(c.text||''));
-  let score=chunkCategoryScore(c,cat);
-  for(const ph of phrases){ if(text.includes(ph)) score+= ph.includes(' ')?16:8; }
-  for(const t of qTerms){ if(text.includes(t)) score+=2; }
-  if(c.title){
-    const nt=normalizeSearchText(c.title);
-    for(const t of qTerms){ if(nt.includes(t)) score+=5; }
-  }
-  return score;
+function getTerms(q){return normalize(q).split(/\s+/).filter(w=>w.length>2&&!STOP.has(w));}
+function phraseList(q){const t=getTerms(q); const out=[]; for(let n=Math.min(5,t.length);n>=1;n--){for(let i=0;i<=t.length-n;i++) out.push(t.slice(i,i+n).join(' '));} return [...new Set(out)].sort((a,b)=>b.length-a.length);}
+const CATEGORY_HINTS={
+  raca:['raca','racas','anao','argoniano','celestial','daedra','demonio','draconato','elfo','humano','mestico','orc','sylvan','quanti'],
+  classe:['classe','classes','arqueiro','barbaro','bardo','bruxo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
+  talento:['talento','talentos','livre','incomum','raro','lendario'],
+  efeito:['efeito','efeitos','aumento de ataque','aumento de defesa','barreira','blindagem','cegueira','chamas','envenenamento','selamento','silencio','amedrontar','atordoamento'],
+  condicao:['condicao','condicoes','agilidade','camuflagem','confusao','congelamento','coragem','dano agravado','dano penetrante','dano real','dispel','queda','repelimento','sangramento','tormenta','vulnerabilidade'],
+  mercado:['mercado','item','itens','preco','arma','armadura','escudo','anel','colar','racao','ração','pocao','servico','taberna','animal','foco arcano','instrumento musical'],
+  familiar:['familiar','familiares'],
+  habilidade:['habilidade','habilidades','magia','magias','criacao','evolucao','dualidade']
+};
+function detectCategory(q){const nq=normalize(q); let best=null,score=0; for(const [cat,words] of Object.entries(CATEGORY_HINTS)){let s=0; for(const w of words) if(nq.includes(normalize(w))) s++; if(s>score){score=s;best=cat;}} return best;}
+function chunkCatScore(c,cat){if(!cat) return 0; const title=normalize(c.title); const text=normalize(c.text); const map={
+  raca:['as racas','anao','argoniano','celestial','daedra','demonio','draconato','elfo','humano','mestico','orc','sylvan','quanti'],
+  classe:['classes e especializacoes','caracteristicas exclusivas da classe','arqueiro','barbaro','bardo','bruxo','clerigo','feiticeiro','guerreiro','ladino','mago','monge','paladino'],
+  talento:['os talentos','talentos livres','talentos incomuns','talentos raros','talentos lendarios'],
+  efeito:['efeitos combate','efeitos positivos','efeitos negativos'],
+  condicao:['condicoes'],
+  mercado:['mercado','comercio','armas','armaduras','materias','servicos','taberna','animais','bens e posses','foco arcano','instrumentos musicais'],
+  familiar:['familiares'], habilidade:['habilidades','criacao de habilidades','evolucao de habilidades','magias','artes']
+}[cat]||[]; return map.reduce((a,w)=>a+((title.includes(w)||text.includes(w))?5:0),0);}
+function scoreChunk(c,terms,cat,phrases){const all=normalize((c.title||'')+' '+(c.text||'')); const title=normalize(c.title||''); let score=chunkCatScore(c,cat); for(const ph of phrases){if(all.includes(ph)) score+=ph.includes(' ')?18:8; if(title.includes(ph)) score+=10;} for(const t of terms){if(all.includes(t)) score+=2; if(title.includes(t)) score+=5;} return score;}
+function splitSentences(txt){return String(txt||'').split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>18);}
+function bestExcerpt(c,terms,phrases){const sents=splitSentences(c.text); const scored=sents.map(st=>{const n=normalize(st); let score=0; for(const ph of phrases) if(n.includes(ph)) score+=ph.includes(' ')?20:10; for(const t of terms) if(n.includes(t)) score+=2; return {st,score};}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const list=scored.length?scored:sents.slice(0,4).map(st=>({st,score:1})); const chosen=[]; let total=0; for(const it of list){ if(total+it.st.length>1050&&chosen.length) continue; chosen.push(it.st); total+=it.st.length; if(chosen.length>=4) break;} return chosen.join(' ') || String(c.text||'').slice(0,900);}
+function searchBook(q,catOverride=null,limitN=4){const base=getBase(); const terms=getTerms(q); const phrases=phraseList(q); const cat=catOverride||detectCategory(q); const ranked=base.map(c=>({c,score:scoreChunk(c,terms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score); const long=phrases.filter(p=>p.length>=5); const exact=ranked.filter(x=>long.some(p=>normalize((x.c.title||'')+' '+x.c.text).includes(p))); const top=(exact.length?exact:ranked).slice(0,limitN); return {top,terms,phrases,cat};}
+function sourceLine(sources){const unique=[]; for(const s of sources){if(!unique.some(u=>u.page===s.page&&u.title===s.title)) unique.push(s);} return '<div class="chat-source"><strong>Fonte:</strong> '+unique.slice(0,5).map(s=>`Crônicas do Éter, p. ${esc(s.page)}${s.title?` — ${esc(s.title)}`:''}`).join('; ')+'</div>';}
+function recommendationAnswer(q){const nq=normalize(q); const asksRecommendation=/(combina|recomenda|recomend|melhor|build|estilo|variacao|variação|full)/i.test(q); if(!asksRecommendation) return null;
+  const chunks=[]; const sources=[];
+  function addSearch(term,cat){const r=searchBook(term,cat,2); r.top.forEach(x=>{chunks.push(x.c); sources.push({page:x.c.page,title:x.c.title||'Crônicas do Éter'});});}
+  let html='';
+  if(nq.includes('ladino')){addSearch('Ladino classe destreza furtividade dano cortante perfurante', 'classe'); addSearch('Elfo raça destreza', 'raca'); addSearch('Humano raça', 'raca'); addSearch('Argoniano raça', 'raca'); html='<p><strong>Para Ladino, eu priorizaria raças que favoreçam mobilidade, furtividade, destreza, percepção ou versatilidade.</strong></p><p>As opções que tendem a combinar melhor são <strong>Elfo</strong>, pela afinidade natural com agilidade e estilo técnico; <strong>Humano</strong>, pela versatilidade geral; e <strong>Argoniano/Sylvan</strong>, se você quiser um ladino mais explorador, furtivo ou ligado a sobrevivência. Se a ideia for dano puro com armas leves, foque talentos de dano cortante/perfurante, furtividade, emboscada e incremento crítico.</p>';}
+  else if(nq.includes('celestial')){addSearch('Celestial raça', 'raca'); addSearch('Paladino classe', 'classe'); addSearch('Clérigo classe', 'classe'); addSearch('Bardo classe', 'classe'); html='<p><strong>Para um Celestial, eu recomendaria classes que aproveitam bem a temática de luz, suporte, fé ou presença sobrenatural.</strong></p><p>As combinações mais naturais são <strong>Paladino</strong>, para um personagem marcial sagrado; <strong>Clérigo</strong>, para cura, símbolos sagrados e orientação divina; e <strong>Bardo</strong>, se você quiser um celestial carismático, inspirador e versátil. Se quiser fugir do óbvio, <strong>Feiticeiro</strong> também funciona bem para uma origem mágica forte.</p>';}
+  else if(nq.includes('full fisico')||nq.includes('fisico')){addSearch('Artes da Guerra Artes de Combate', 'habilidade'); addSearch('Talentos Livres Combatente Ágil Bárbaro Atirador Nato', 'talento'); addSearch('Caminho da Brutalidade Caminho da Agilidade Caminho do Combatente', 'talento'); html='<p><strong>Para um personagem full físico ganhar variação de estilo, eu recomendo diversificar função sem abandonar a base física.</strong></p><p>Você pode adicionar controle físico por manobras, trocar entre armas de força/destreza, usar talentos que melhorem dano cortante, perfurante ou impactante, investir em mobilidade e escolher equipamentos com efeitos utilitários. Outra opção é ter uma subclasse mais técnica ou suporte, mas manter os cálculos principais na classe física principal.</p>';}
+  else {addSearch(q,detectCategory(q)); html='<p><strong>Posso recomendar com base no sistema, mas preciso cruzar raça, classe, talentos, equipamentos e estilo desejado.</strong></p><p>Como regra geral: defina primeiro sua função principal (dano, defesa, suporte, controle ou exploração), depois escolha raça/classe que reforcem essa função e talentos que corrijam fraquezas. Para uma recomendação precisa, diga raça, classe, graduação e estilo de combate desejado.</p>';}
+  return {html:html+sourceLine(sources), sources};
 }
-function splitSentences(txt){return String(txt||'').split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>20);}
-function bestExcerpt(chunk,qTerms,phrases){
-  const sents=splitSentences(chunk.text);
-  let chosen=[], total=0;
-  const scored=sents.map(st=>{
-    const n=normalizeSearchText(st);
-    let score=0;
-    for(const ph of phrases){ if(n.includes(ph)) score+= ph.includes(' ')?20:10; }
-    for(const t of qTerms){ if(n.includes(t)) score+=2; }
-    return {st,score};
-  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
-  const list=scored.length?scored:sents.slice(0,3).map(st=>({st,score:1}));
-  for(const item of list){
-    if(total+item.st.length>900 && chosen.length) continue;
-    chosen.push(item.st); total+=item.st.length;
-    if(chosen.length>=4) break;
-  }
-  let out=chosen.join(' ');
-  if(!out) out=chunk.text.slice(0,900);
-  if(out.length>1000) out=out.slice(0,1000)+'...';
-  return out;
-}
-function answerFromBook(q){
-  const base=getBase();
-  const qTerms=terms(q); const cat=detectCategory(q); const phrases=exactPhraseCandidates(q);
-  if(!base.length) return {html:'A base completa do livro ainda não foi carregada no site.', sources:[]};
-  let ranked=base.map(c=>({c,score:scoreChunk(c,qTerms,cat,phrases)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
-  // precisão: se achar ocorrência exata longa, prioriza os trechos com a frase exata
-  const longPhrases=phrases.filter(p=>p.length>=5);
-  const exact=ranked.filter(x=>longPhrases.some(p=>normalizeSearchText((x.c.title||'')+' '+x.c.text).includes(p)));
-  if(exact.length) ranked=exact.concat(ranked.filter(x=>!exact.includes(x)));
-  const top=ranked.slice(0, cat==='mercado'?4:3);
-  if(!top.length){return {html:'Não encontrei esse conteúdo na base do livro. Tente usar o nome exato do efeito, condição, raça, classe, item ou regra.', sources:[]};}
-  const parts=[]; const sources=[];
-  for(const {c} of top){
-    const excerpt=bestExcerpt(c,qTerms,phrases);
-    if(!parts.some(p=>p.includes(excerpt.slice(0,80)))) parts.push(excerpt);
-    sources.push({page:c.page,title:c.title||'Crônicas do Éter'});
-  }
-  let intro='';
-  if(cat==='raca') intro='Sobre a raça perguntada:';
-  else if(cat==='classe') intro='Sobre a classe perguntada:';
-  else if(cat==='talento') intro='Sobre o talento perguntado:';
-  else if(cat==='efeito') intro='Sobre o efeito perguntado:';
-  else if(cat==='condicao') intro='Sobre a condição perguntada:';
-  else if(cat==='mercado') intro='Sobre o item/regra de mercado perguntado:';
-  else if(cat==='familiar') intro='Sobre familiares:';
-  else if(cat==='habilidade') intro='Sobre habilidades:';
-  else intro='Encontrei a seguinte regra no sistema:';
-  const uniqueSources=[];
-  for(const s of sources){ if(!uniqueSources.some(u=>u.page===s.page && u.title===s.title)) uniqueSources.push(s); }
-  const sourceHtml='<div class="chat-source"><strong>Fonte:</strong> '+uniqueSources.slice(0,4).map(s=>`Crônicas do Éter, p. ${esc(s.page)}${s.title?` — ${esc(s.title)}`:''}`).join('; ')+'</div>';
-  return {html:`<p><strong>${esc(intro)}</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceHtml}`, sources:uniqueSources};
-}
-function addMsg(kind,html){
-  const div=document.createElement('div');
-  div.className=kind==='user'?'chat-msg-user':'chat-msg-bot';
-  div.style.padding='.75rem 1rem'; div.style.borderRadius='14px'; div.style.border='1px solid rgba(199,164,92,.28)'; div.style.background=kind==='user'?'rgba(199,164,92,.12)':'rgba(255,255,255,.05)';
-  div.innerHTML=html;
-  log.appendChild(div); log.scrollTop=log.scrollHeight;
-}
-async function ask(q){ if(!q.trim()) return; addMsg('user',esc(q)); addMsg('bot','Consultando o livro completo...'); const answer=answerFromBook(q); log.lastElementChild.innerHTML=answer.html; input.value=''; }
+function answerFromBook(q){const rec=recommendationAnswer(q); if(rec) return rec; const base=getBase(); if(!base.length) return {html:'A base completa do livro ainda não foi carregada. Recarregue a página e tente novamente.',sources:[]}; const {top,terms,phrases,cat}=searchBook(q,null,cat==='mercado'?5:4); if(!top.length) return {html:'Não encontrei esse conteúdo na base do livro. Tente usar o nome exato do efeito, condição, raça, classe, item ou regra.',sources:[]}; const intros={raca:'Sobre a raça perguntada:',classe:'Sobre a classe perguntada:',talento:'Sobre o talento perguntado:',efeito:'Sobre o efeito perguntado:',condicao:'Sobre a condição perguntada:',mercado:'Sobre o item ou regra de mercado perguntada:',familiar:'Sobre familiares:',habilidade:'Sobre habilidades:'}; const parts=[]; const sources=[]; for(const {c} of top){const ex=bestExcerpt(c,terms,phrases); if(ex&&!parts.some(p=>p.slice(0,80)===ex.slice(0,80))) parts.push(ex); sources.push({page:c.page,title:c.title||'Crônicas do Éter'});} return {html:`<p><strong>${esc(intros[cat]||'Encontrei a seguinte regra no sistema:')}</strong></p><p>${parts.map(esc).join('</p><p>')}</p>${sourceLine(sources)}`, sources};}
+function addMsg(kind,html){const div=document.createElement('div'); div.className=kind==='user'?'chat-msg-user':'chat-msg-bot'; div.style.padding='.75rem 1rem'; div.style.borderRadius='14px'; div.style.border='1px solid rgba(199,164,92,.28)'; div.style.background=kind==='user'?'rgba(199,164,92,.12)':'rgba(255,255,255,.05)'; div.innerHTML=html; log.appendChild(div); log.scrollTop=log.scrollHeight;}
+async function ask(q){if(!q.trim()) return; addMsg('user',esc(q)); addMsg('bot','Consultando o livro completo...'); const answer=answerFromBook(q); log.lastElementChild.innerHTML=answer.html; input.value='';}
 askBtn.addEventListener('click',()=>ask(input.value));
-input.addEventListener('keydown',e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ ask(input.value); }});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) ask(input.value);});
 document.querySelectorAll('.quick-question').forEach(b=>b.addEventListener('click',()=>ask(b.dataset.q||b.textContent)));
-watchAuth(({profile})=>{
-  if(!canUse(profile)){ accessBox.innerHTML='<strong>Acesso premium necessário.</strong> Entre com uma conta premium, mestre ou admin para usar o assistente.'; app.hidden=true; return; }
-  accessBox.hidden=true; app.hidden=false;
-  if(!log.dataset.started){ addMsg('bot','Olá! Sou o Assistente do Sistema. Pergunte sobre regras, personagem, XP/PT, talentos, familiar ou equipamentos.'); log.dataset.started='1'; }
-});
+try{
+  watchAuth(({profile, configured, error})=>{authResolved=true; if(error){accessBox.innerHTML='<strong>Erro ao carregar acesso.</strong> Faça login novamente ou recarregue a página.'; app.hidden=true; return;} if(!configured){accessBox.innerHTML='<strong>Firebase não configurado.</strong>'; app.hidden=true; return;} if(!canUse(profile)){accessBox.innerHTML='<strong>Acesso premium necessário.</strong> Entre com uma conta premium, mestre ou admin para usar o assistente.'; app.hidden=true; return;} accessBox.hidden=true; app.hidden=false; if(!log.dataset.started){addMsg('bot','Olá! Sou o Assistente do Sistema. Posso responder dúvidas sobre regras, condições, raças, classes, talentos, itens, mercado e também fazer recomendações de personagem com base no livro.'); log.dataset.started='1';}});
+}catch(err){authResolved=true; accessBox.innerHTML='<strong>Erro ao iniciar assistente.</strong> '+esc(err.message||err);}
+setTimeout(()=>{if(!authResolved){accessBox.innerHTML='<strong>Não foi possível confirmar seu acesso.</strong> Recarregue a página ou faça login novamente.';}},6000);
 </script>
 </body>
 </html>
