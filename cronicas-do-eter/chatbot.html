@@ -28,6 +28,7 @@
   <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a>
   <a class="requires-auth" href="meus-familiares.html">Meus Familiares</a>
   <a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a>
+  <a class="requires-auth" href="sistema-download.html">Download do Sistema</a>
   <a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div>
   <a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a>
@@ -183,6 +184,74 @@ function answerFromBook(q){
     return directAnswer(q);
   }catch(err){console.error('Erro no assistente:',err); return {html:'O assistente encontrou um erro ao interpretar essa pergunta, mas não travou. Tente usar o nome exato da regra, raça, classe, talento, habilidade ou item.',sources:[]};}
 }
+
+
+// ========================================================
+// MODO ÚTIL — respostas mais diretas, com intenção antes da busca
+// ========================================================
+function findExactTitleMatches(q, cat){
+  const nq=normalize(q); const base=getBase().filter(c=>isChunkInCategory(c,cat));
+  return base.map(c=>({c,title:normalize(c.title||'')}))
+    .filter(x=>x.title && (nq.includes(x.title)||x.title.split(' ').filter(w=>w.length>3).some(w=>nq.includes(w))))
+    .sort((a,b)=>b.title.length-a.title.length).slice(0,4).map(x=>x.c);
+}
+function relatedTitles(route, limit=6){
+  const ranked=getBase().filter(c=>!route.cat||isChunkInCategory(c,route.cat)).map(c=>({c,score:scoreChunk(c,route)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,limit);
+  return ranked.map(x=>x.c.title).filter(Boolean);
+}
+function smartFallback(q, route){
+  const titles=[...new Set(relatedTitles(route,6))];
+  if(titles.length){
+    return {html:`<p><strong>Não encontrei uma resposta fechada para essa pergunta.</strong></p><p>Para não inventar nem trazer trechos aleatórios, estes foram os assuntos mais próximos que encontrei:</p><p>${titles.map(t=>`• ${esc(t)}`).join('<br>')}</p><p>Reescreva usando um desses nomes ou pergunte algo mais específico, por exemplo: <em>custo de X</em>, <em>dano de X</em>, <em>como funciona X</em>.</p>`,sources:[]};
+  }
+  return {html:'<p><strong>Não encontrei isso na base carregada.</strong></p><p>Tente usar o nome exato da regra, classe, raça, talento, habilidade, item ou efeito.</p>',sources:[]};
+}
+function practicalGuide(q){
+  const n=normalize(q);
+  if(/criar personagem|fazer personagem|montar personagem/.test(n)){
+    return {html:'<p><strong>Passo a passo prático:</strong></p><p>1. Escolha a raça e anote seus bônus/regras.<br>2. Escolha a classe e veja seus recursos principais.<br>3. Defina rank/nível inicial conforme a mesa.<br>4. Distribua atributos pensando na função do personagem.<br>5. Escolha talentos, habilidades e equipamentos.<br>6. Revise vida, mana, energia, deslocamento e defesas.</p><p>Se quiser, pergunte algo como: <em>qual raça combina com mago?</em> ou <em>build de guerreiro rank C</em>.</p>',sources:[]};
+  }
+  if(/como calcular vida|calcular vida|vida maxima|vida máxima/.test(n)){
+    const r=buildRoute('vida cálculo personagens classes');
+    const top=searchPrecise({...r,cat:'classe'},3).map(x=>x.c);
+    if(top.length){return {html:`<p><strong>Sobre vida:</strong></p><p>${top.map(c=>esc(pickSentences(c,{...r,fields:['vida']},2))).join('</p><p>')}</p>${sourceLine(collectSources(top))}`,sources:collectSources(top)};}
+  }
+  if(/como calcular mana|calcular mana/.test(n)){
+    const r=buildRoute('mana cálculo personagens classes'); const top=searchPrecise({...r,cat:'classe'},3).map(x=>x.c);
+    if(top.length){return {html:`<p><strong>Sobre mana:</strong></p><p>${top.map(c=>esc(pickSentences(c,{...r,fields:['mana']},2))).join('</p><p>')}</p>${sourceLine(collectSources(top))}`,sources:collectSources(top)};}
+  }
+  return null;
+}
+directAnswer = function(q){
+  const guide=practicalGuide(q); if(guide) return guide;
+  const route=buildRoute(q);
+  const onlyGeneric=route.terms.length>0 && route.terms.every(t=>GENERIC_TERMS.has(t));
+  if(onlyGeneric && !route.cat){
+    return {html:'<p><strong>Essa pergunta está ampla demais.</strong></p><p>Exemplo: se você perguntar só “vida”, existem muitas menções de vida no sistema. Pergunte com alvo: <em>vida do Guerreiro</em>, <em>vida de montaria</em>, <em>Orvalho da Vida</em> ou <em>como calcular vida</em>.</p>',sources:[]};
+  }
+  let exact=findExactTitleMatches(q, route.cat);
+  let chunks=exact.length?exact:uniqueChunks(searchPrecise(route, route.mode==='objective'?3:5).map(x=>x.c));
+  if(!chunks.length) return smartFallback(q, route);
+  const bestScore=scoreChunk(chunks[0],route);
+  if(bestScore<22 && route.target) return smartFallback(q, route);
+  const parts=chunks.slice(0,route.mode==='objective'?2:4).map(c=>{
+    const title=c.title?`<strong>${esc(c.title)}</strong><br>`:'';
+    const txt=pickSentences(c,route,route.mode==='objective'?3:4) || String(c.text||'').slice(0,700);
+    return `${title}${esc(txt)}`;
+  });
+  const tip=route.mode==='objective'?'':'<p class="chat-source"><strong>Observação:</strong> respondi só com os trechos mais próximos, sem varrer o sistema inteiro por palavra solta.</p>';
+  return {html:`<p><strong>Resposta:</strong></p><p>${parts.join('</p><p>')}</p>${tip}${sourceLine(collectSources(chunks))}`,sources:collectSources(chunks)};
+};
+interpretiveAnswer = function(q){
+  const route=buildRoute(q); if(route.mode!=='interpretive') return null;
+  const cats=new Set(); if(route.cat) cats.add(route.cat); if(/raca|raça|classe|build|personagem|combina/.test(normalize(q))){cats.add('raca');cats.add('classe');cats.add('talento');cats.add('habilidade');}
+  const chunks=[]; [...cats].forEach(cat=>searchPrecise({...route,cat},3).forEach(x=>chunks.push(x.c)));
+  const unique=uniqueChunks(chunks).slice(0,6);
+  if(!unique.length) return smartFallback(q, route);
+  const bullets=unique.map(c=>`• <strong>${esc(c.title||'Trecho')}</strong>: ${esc(pickSentences(c,route,2))}`).join('<br>');
+  return {html:`<p><strong>Resposta interpretativa:</strong></p><p>${bullets}</p><p><strong>Minha leitura:</strong> use a opção que mais fortalece o atributo, recurso ou função principal do personagem. Evite escolhas que disputem a mesma ação ou gastem os mesmos recursos se a build já for cara em mana/energia.</p>${sourceLine(collectSources(unique))}`,sources:collectSources(unique)};
+};
+
 function addMsg(kind,html){const div=document.createElement('div'); div.className=kind==='user'?'chat-msg-user':'chat-msg-bot'; div.style.padding='.75rem 1rem'; div.style.borderRadius='14px'; div.style.border='1px solid rgba(199,164,92,.28)'; div.style.background=kind==='user'?'rgba(199,164,92,.12)':'rgba(255,255,255,.05)'; div.innerHTML=html; log.appendChild(div); log.scrollTop=log.scrollHeight;}
 let answering=false;
 async function ask(q){

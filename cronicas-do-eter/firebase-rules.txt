@@ -135,13 +135,22 @@ service cloud.firestore {
       // Jogador logado pode reivindicar personagem da categoria Jogadores.
       allow update: if signedIn()
         && resource.data.kind == 'character'
-        && resource.data.category == 'Jogadores'
+        && resource.data.category in ['Jogadores', 'Personagens']
         && resource.data.visible != false
         && (!('claimedByUid' in resource.data) || resource.data.claimedByUid == '' || resource.data.claimedByUid == request.auth.uid)
         && request.resource.data.claimedByUid == request.auth.uid
         && request.resource.data.diff(resource.data).changedKeys().hasOnly([
           'claimedByUid', 'claimedByEmail', 'claimedCharacterId', 'claimedAt', 'updatedAt'
         ]);
+    }
+
+
+    match /systemDownloads/{docId} {
+      // Usuários logados podem ver downloads premium; a página ainda limita visualmente a premium/aprovados.
+      allow read: if signedIn();
+      // Apenas Admin publica, edita ou remove arquivos disponíveis para download.
+      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     match /{document=**} {

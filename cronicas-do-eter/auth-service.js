@@ -735,7 +735,7 @@ export async function deleteFamiliar(familiarId) {
 async function requireAdminUser() {
   const user = requireCurrentUser();
   const profile = await getUserProfile(user.uid);
-  if (profile?.role !== "admin") throw new Error("Somente o Admin pode alterar as mesas do Roll20.");
+  if (profile?.role !== "admin") throw new Error("Somente o Admin pode alterar esta área.");
   return user;
 }
 
@@ -750,9 +750,10 @@ function cleanRoll20Image(value) {
 }
 
 function normalizeRoll20Category(value) {
-  const allowed = ["Jogadores", "MOB", "NPC", "Místicos"];
+  const allowed = ["Personagens", "MOB", "NPC", "Místicos", "Folheto"];
   const cleaned = cleanText(value, "NPC");
-  return allowed.includes(cleaned) ? cleaned : "NPC";
+  const mapped = cleaned === "Jogadores" ? "Personagens" : cleaned;
+  return allowed.includes(mapped) ? mapped : "NPC";
 }
 
 function sortRoll20ByName(a, b) {
@@ -917,7 +918,7 @@ export async function claimRoll20Character(importId) {
   if (!importSnap.exists()) throw new Error("Personagem não encontrado.");
   const data = importSnap.data();
   if (data.kind !== "character") throw new Error("Apenas personagens podem ser reivindicados.");
-  if (normalizeRoll20Category(data.category) !== "Jogadores") throw new Error("Apenas personagens da categoria Jogadores podem ser reivindicados.");
+  if (normalizeRoll20Category(data.category) !== "Personagens") throw new Error("Apenas personagens da categoria Personagens podem ser reivindicados.");
   if (data.visible === false) throw new Error("Este personagem está oculto.");
   if (data.claimedByUid && data.claimedByUid !== user.uid) throw new Error("Este personagem já foi reivindicado por outro jogador.");
 
@@ -1032,6 +1033,75 @@ export async function deleteRoll20Import(importId) {
   if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios registros.");
   await deleteDoc(ref);
   await createLog("roll20.import_deleted", { importId, name: data.name || "" });
+}
+
+
+
+// ========================================================
+// DOWNLOADS PREMIUM DO SISTEMA
+// ========================================================
+
+export async function saveSystemDownload(download) {
+  const { db } = getFirebase();
+  const user = await requireAdminUser();
+  const payload = {
+    ownerUid: user.uid,
+    ownerEmail: normalizeEmail(user.email || ""),
+    title: cleanText(download.title, "Sistema Crônicas do Éter"),
+    version: cleanText(download.version),
+    fileUrl: cleanUrl(download.fileUrl),
+    description: cleanText(download.description),
+    visible: download.visible !== false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+  if (!payload.fileUrl) throw new Error("Informe o link de download do arquivo.");
+  const ref = await addDoc(collection(db, "systemDownloads"), payload);
+  await createLog("system_download.saved", { downloadId: ref.id, title: payload.title });
+  return ref.id;
+}
+
+export async function listSystemDownloads() {
+  const { db } = getFirebase();
+  requireCurrentUser();
+  const snap = await getDocs(collection(db, "systemDownloads"));
+  const rows = [];
+  snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+  return rows.sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "pt-BR", { sensitivity: "base" }));
+}
+
+export async function updateSystemDownload(downloadId, patch = {}) {
+  const { db } = getFirebase();
+  const user = await requireAdminUser();
+  if (!downloadId) throw new Error("Download inválido.");
+  const ref = doc(db, "systemDownloads", downloadId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Download não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode editar seus próprios downloads.");
+  const safePatch = {
+    title: patch.title !== undefined ? cleanText(patch.title, data.title || "") : data.title,
+    version: patch.version !== undefined ? cleanText(patch.version) : data.version,
+    fileUrl: patch.fileUrl !== undefined ? cleanUrl(patch.fileUrl) : data.fileUrl,
+    description: patch.description !== undefined ? cleanText(patch.description) : data.description,
+    visible: patch.visible !== undefined ? Boolean(patch.visible) : data.visible,
+    updatedAt: serverTimestamp()
+  };
+  await updateDoc(ref, safePatch);
+  await createLog("system_download.updated", { downloadId, title: safePatch.title || "" });
+}
+
+export async function deleteSystemDownload(downloadId) {
+  const { db } = getFirebase();
+  const user = await requireAdminUser();
+  if (!downloadId) throw new Error("Download inválido.");
+  const ref = doc(db, "systemDownloads", downloadId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Download não encontrado.");
+  const data = snap.data();
+  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios downloads.");
+  await deleteDoc(ref);
+  await createLog("system_download.deleted", { downloadId, title: data.title || "" });
 }
 
 // ========================================================

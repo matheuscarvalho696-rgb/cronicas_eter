@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Download do Sistema — Crônicas do Éter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+<style>
+.download-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;align-items:start}.download-panel{background:var(--surface);border:1px solid var(--border);padding:1.3rem}.download-panel h3,.download-card h4{font-family:'Cinzel',serif;color:var(--ether-pale);letter-spacing:.06em;text-transform:uppercase}.download-form{display:grid;gap:.75rem}.download-form label{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--silver-dim)}.download-form input,.download-form textarea{width:100%;background:rgba(255,255,255,.035);border:1px solid var(--border);color:var(--text);padding:.7rem .8rem;font-family:inherit}.download-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:.8rem}.download-list{display:grid;gap:1rem}.download-card{border:1px solid rgba(155,111,212,.22);background:rgba(10,9,16,.6);padding:1rem}.download-card p{color:var(--mist);line-height:1.55}.download-meta{font-size:.85rem;color:var(--text-dim)}.download-empty{border:1px dashed rgba(155,111,212,.35);padding:1.2rem;color:var(--mist);background:rgba(155,111,212,.04)}.admin-only{display:none}.is-admin .admin-only{display:block}.is-admin .admin-only.download-actions{display:flex}@media(max-width:900px){.download-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="topbar"><button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button><a class="nav-brand" href="index.html">Crônicas do Éter</a></nav>
+<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar">
+  <div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div>
+  <a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a><a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a><a class="requires-auth" href="meus-familiares.html">Meus Familiares</a><a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a><a class="active requires-auth" href="sistema-download.html">Download do Sistema</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
+  <div class="sidebar-divider requires-auth">Ferramentas</div><a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a><a class="requires-auth" href="mercado.html">Mercado</a><a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
+</aside>
+<section><div class="container">
+  <p class="eyebrow">Premium</p><h1>Download do Sistema</h1>
+  <p class="subtitle">Área para disponibilizar o arquivo atual do sistema apenas para usuários premium aprovados.</p>
+  <div id="downloadAccessBox" class="download-empty">Verificando acesso...</div>
+  <div id="downloadApp" style="display:none">
+    <div class="admin-only download-panel reveal" style="margin-bottom:1.2rem"><h3>Admin — cadastrar arquivo</h3><form id="downloadForm" class="download-form"><label>Título</label><input id="downloadTitle" placeholder="Ex.: Crônicas do Éter — Livro do Sistema" required><label>Versão</label><input id="downloadVersion" placeholder="Ex.: v1.0, Sprint 50, Junho/2026"><label>Link de download</label><input id="downloadUrl" placeholder="Cole aqui o link do PDF, ZIP ou pasta" required><label>Descrição</label><textarea id="downloadDescription" rows="4" placeholder="Explique o que vem neste arquivo"></textarea><button class="btn-primary" type="submit">Publicar download</button><p id="downloadMsg" class="sheet-muted"></p></form></div>
+    <div class="download-panel reveal"><h3>Arquivos disponíveis</h3><div id="downloadsList" class="download-list"><div class="download-empty">Carregando arquivos...</div></div></div>
+  </div>
+</div></section>
+<footer>Crônicas do Éter — Portal do Jogador</footer>
+<script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script>
+<script type="module">
+import { watchAuth, hasApprovedAccess, saveSystemDownload, listSystemDownloads, updateSystemDownload, deleteSystemDownload } from './auth-service.js';
+const $=id=>document.getElementById(id); let isAdmin=false; let downloads=[];
+function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function allowed(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master'||profile.role==='player');}
+function render(){const visible=downloads.filter(d=>isAdmin||d.visible!==false); $('downloadsList').innerHTML=visible.length?visible.map(d=>`<article class="download-card"><h4>${esc(d.title||'Sistema Crônicas do Éter')}</h4><p class="download-meta">${d.version?`Versão: ${esc(d.version)}`:'Versão não informada'} ${d.visible===false?' • Oculto':''}</p>${d.description?`<p>${esc(d.description)}</p>`:''}<div class="download-actions"><a class="btn-primary" href="${esc(d.fileUrl||'#')}" target="_blank" rel="noopener" download>Baixar arquivo</a>${isAdmin?`<button class="btn-secondary toggle-download" data-id="${esc(d.id)}" data-visible="${d.visible!==false}" type="button">${d.visible===false?'Mostrar':'Ocultar'}</button><button class="btn-secondary delete-download" data-id="${esc(d.id)}" type="button">Excluir</button>`:''}</div></article>`).join(''):'<div class="download-empty">Nenhum arquivo disponível ainda.</div>'; if(isAdmin){document.querySelectorAll('.toggle-download').forEach(b=>b.onclick=async()=>{await updateSystemDownload(b.dataset.id,{visible:!(b.dataset.visible==='true')}); await load();});document.querySelectorAll('.delete-download').forEach(b=>b.onclick=async()=>{if(!confirm('Excluir este download?'))return; await deleteSystemDownload(b.dataset.id); await load();});}}
+async function load(){downloads=await listSystemDownloads(); render();}
+$('downloadForm')?.addEventListener('submit',async e=>{e.preventDefault(); $('downloadMsg').textContent='Salvando...'; try{await saveSystemDownload({title:$('downloadTitle').value,version:$('downloadVersion').value,fileUrl:$('downloadUrl').value,description:$('downloadDescription').value}); e.target.reset(); $('downloadMsg').textContent='Download publicado.'; await load();}catch(err){$('downloadMsg').textContent=err.message||'Erro ao publicar download.';}});
+watchAuth(async({profile})=>{if(!allowed(profile)){ $('downloadAccessBox').textContent='Acesso restrito a contas premium aprovadas.'; return;} isAdmin=profile.role==='admin'; document.body.classList.toggle('is-admin',isAdmin); $('downloadAccessBox').style.display='none'; $('downloadApp').style.display='block'; try{await load();}catch(err){$('downloadsList').innerHTML=`<div class="download-empty">${esc(err.message)}</div>`;}});
+</script>
+</body></html>
