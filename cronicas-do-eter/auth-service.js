@@ -10,6 +10,7 @@ import {
   sendPasswordResetEmail,
   signOut,
   updateProfile,
+  deleteUser,
   doc,
   getDoc,
   setDoc,
@@ -62,14 +63,16 @@ function buildInitialProfile(user, nome = "", inviteCodeUsed = "") {
     nome: nome || user.displayName || email,
     email,
     role: isBootstrapAdmin ? "admin" : "player",
-    status: "approved",
-    premium: true,
+    status: isBootstrapAdmin ? "approved" : "pending_email",
+    premium: isBootstrapAdmin,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     lastLogin: serverTimestamp(),
     account: {
       inviteCodeUsed: normalizeCode(inviteCodeUsed),
       bootstrapAdmin: isBootstrapAdmin,
+      emailCodeRequired: !isBootstrapAdmin,
+      emailVerifiedByCode: isBootstrapAdmin,
       acceptedTerms: true,
       loginCount: 1
     },
@@ -261,7 +264,7 @@ function buildPendingProfile(user, nome = "") {
   return {
     ...base,
     role: isBootstrapAdmin ? "admin" : "player",
-    status: isBootstrapAdmin ? "approved" : "pending",
+    status: isBootstrapAdmin ? "approved" : "pending_email",
     premium: isBootstrapAdmin,
     account: {
       ...(base.account || {}),
@@ -282,6 +285,7 @@ async function createEmailVerificationForUser(user, nome = "") {
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   await setDoc(doc(db, "emailVerifications", user.uid), {
     uid: user.uid,
+    userId: user.uid,
     email: normalizeEmail(user.email || ""),
     nome: String(nome || user.displayName || "Jogador").trim(),
     code,
@@ -301,21 +305,53 @@ export async function registerWithEmailCode({ nome, email, senha }) {
   if (!cleanEmail) throw new Error("Informe um e-mail válido.");
 
   const { auth, db } = getFirebase();
-  const cred = await createUserWithEmailAndPassword(auth, cleanEmail, senha);
-  await updateProfile(cred.user, { displayName: cleanName }).catch(() => {});
+  const isBootstrapAdmin = isBootstrapAdminEmail(cleanEmail);
 
-  const profile = buildPendingProfile(cred.user, cleanName);
-  await setDoc(doc(db, "users", cred.user.uid), profile);
-
-  if (profile.status === "approved") {
+  // A conta bootstrap do administrador não precisa de validação por e-mail.
+  if (isBootstrapAdmin) {
+    const cred = await createUserWithEmailAndPassword(auth, cleanEmail, senha);
+    await updateProfile(cred.user, { displayName: cleanName }).catch(() => {});
+    const profile = buildPendingProfile(cred.user, cleanName);
+    await setDoc(doc(db, "users", cred.user.uid), profile);
     await createLog("auth.register.bootstrap_admin", { uid: cred.user.uid, email: cleanEmail });
     return { user: cred.user, requiresCode: false };
   }
 
-  const verification = await createEmailVerificationForUser(cred.user, cleanName);
-  await sendInviteEmailViaEmailJS({ email: cleanEmail, nome: cleanName, code: verification.code });
-  await createLog("auth.email_code_sent", { uid: cred.user.uid, email: cleanEmail });
-  return { user: cred.user, requiresCode: true, expiresAt: verification.expiresAt };
+  // Primeiro envia o e-mail. Só depois cria a conta.
+  // Assim, se o EmailJS falhar, nenhum usuário fica criado/solto no Firebase.
+  const code = makeEmailVerificationCode();
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  await sendInviteEmailViaEmailJS({ email: cleanEmail, nome: cleanName, code });
+
+  let cred = null;
+  try {
+    cred = await createUserWithEmailAndPassword(auth, cleanEmail, senha);
+    await updateProfile(cred.user, { displayName: cleanName }).catch(() => {});
+
+    const profile = buildPendingProfile(cred.user, cleanName);
+    await setDoc(doc(db, "users", cred.user.uid), profile);
+
+    await setDoc(doc(db, "emailVerifications", cred.user.uid), {
+      uid: cred.user.uid,
+      userId: cred.user.uid,
+      email: cleanEmail,
+      nome: cleanName,
+      code,
+      status: "pending",
+      attempts: 0,
+      expiresAt,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    await createLog("auth.email_code_sent", { uid: cred.user.uid, email: cleanEmail });
+    return { user: cred.user, requiresCode: true, expiresAt };
+  } catch (err) {
+    if (cred?.user) {
+      await deleteUser(cred.user).catch(() => {});
+    }
+    throw err;
+  }
 }
 
 export async function resendEmailVerificationCode() {
@@ -885,6 +921,16 @@ async function sendInviteEmailViaEmailJS({ email, nome, code }) {
   }
 
   const cfg = mod.emailConfig;
+  const templateParams = {
+    to_email: normalizeEmail(email),
+    email: normalizeEmail(email),
+    name: String(nome || 'Jogador').trim(),
+    to_name: String(nome || 'Jogador').trim(),
+    invite_code: String(code || '').trim(),
+    system_name: 'Crônicas do Éter',
+    expires_in: '30 minutos'
+  };
+
   const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -892,16 +938,8 @@ async function sendInviteEmailViaEmailJS({ email, nome, code }) {
       service_id: cfg.serviceId,
       template_id: cfg.templateId,
       user_id: cfg.publicKey,
-      template_params: {
-        to_email: normalizeEmail(email),
-        // O template atual do EmailJS usa {{name}}; mantemos {{to_name}} também
-        // para compatibilidade com templates futuros.
-        name: String(nome || 'Jogador').trim(),
-        to_name: String(nome || 'Jogador').trim(),
-        invite_code: code,
-        system_name: 'Crônicas do Éter',
-        expires_in: '30 minutos'
-      }
+      public_key: cfg.publicKey,
+      template_params: templateParams
     })
   });
 

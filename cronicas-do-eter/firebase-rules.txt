@@ -58,7 +58,7 @@ service cloud.firestore {
       allow create: if isSelf(userId) && (
         (
           request.resource.data.role == 'player'
-          && request.resource.data.status in ['pending', 'approved']
+          && request.resource.data.status in ['pending_email', 'pending', 'approved']
         )
         ||
         (
@@ -77,7 +77,7 @@ service cloud.firestore {
 
       // Permite que o próprio usuário finalize a validação por código de e-mail.
       allow update: if isSelf(userId)
-        && resource.data.status == 'pending'
+        && resource.data.status in ['pending_email', 'pending']
         && request.resource.data.status == 'approved'
         && request.resource.data.premium == true;
 

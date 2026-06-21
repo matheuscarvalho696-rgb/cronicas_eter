@@ -9,7 +9,8 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,
-  updateProfile
+  updateProfile,
+  deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   getFirestore,
@@ -57,6 +58,7 @@ export {
   sendPasswordResetEmail,
   signOut,
   updateProfile,
+  deleteUser,
   doc,
   getDoc,
   setDoc,
