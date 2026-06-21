@@ -609,7 +609,7 @@ function normalizeRoll20Items(items, kind) {
     kind,
     sourceId: cleanText(item.id || item.sourceId || item.roll20Id || `${kind}-${Date.now()}-${index}`),
     name: cleanText(item.name || item.nome || item.title || item.titulo, kind === "character" ? "Personagem sem nome" : "Folheto sem título"),
-    bio: cleanText(item.bio || item.biografia || item.gmnotes || item.content || item.conteudo),
+    bio: cleanText(item.bioText || item.bio || item.bioHtml || item.biografia || item.notesText || item.notesHtml || item.gmnotes || item.content || item.conteudo || item.notes),
     imageUrl: cleanRoll20Image(item.imageUrl || item.avatar || item.imgsrc || item.image || item.imagem),
     tags: Array.isArray(item.tags) ? item.tags.map(cleanText).filter(Boolean) : [],
     visible: item.visible !== false,

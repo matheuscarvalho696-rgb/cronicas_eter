@@ -1,34 +1,21 @@
 /*
-Crônicas do Éter — Exportador Roll20 v41
+Crônicas do Éter — Exportador Roll20 v44
 
-O que ele faz:
-- Exporta Characters e Handouts da campanha atual do Roll20.
-- Pega nome, bio/notes, imagem/avatar e, opcionalmente, GM Notes.
-- Cria/atualiza um handout chamado "CDE Export JSON" com o JSON pronto para colar no site.
+Comando principal:
+!cde-export
 
-Como instalar:
-1) Abra a campanha no Roll20.
-2) Vá em Settings > API Scripts.
-3) Crie um novo script.
-4) Apague o conteúdo padrão e cole este arquivo inteiro.
-5) Clique em Save Script.
-6) Volte para a mesa e digite no chat: !cde-export
+Ele exporta:
+- Characters: nome, avatar, Bio & Info em HTML e texto limpo.
+- Handouts: nome, avatar, Notes em HTML e texto limpo.
+- Opcional: GM Notes com !cde-export --gmnotes
 
-Comandos:
-!cde-help                         Mostra ajuda.
-!cde-export                       Exporta personagens e folhetos ativos.
-!cde-export --all                 Exporta também arquivados.
-!cde-export --characters          Exporta só personagens.
-!cde-export --handouts            Exporta só folhetos.
-!cde-export --gmnotes             Inclui GM Notes no campo gmnotes.
-!cde-export --selected            Exporta apenas personagens representados pelos tokens selecionados.
-
-Observação: API Scripts exigem Roll20 Pro.
+Depois ele cria/atualiza o handout "CDE Export JSON".
+Abra esse handout, copie o JSON e cole no site.
 */
 var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var EXPORT_HANDOUT_NAME = 'CDE Export JSON';
 
   function whisper(msg) {
@@ -54,13 +41,16 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
       .replace(/&#39;/g, "'")
       .replace(/&#x27;/g, "'")
       .replace(/&#x2F;/g, '/')
-      .replace(/&#(\d+);/g, function (_, n) {
-        try { return String.fromCharCode(parseInt(n, 10)); } catch (e) { return _; }
+      .replace(/&#(\d+);/g, function (match, n) {
+        var code = parseInt(n, 10);
+        if (!isNaN(code)) return String.fromCharCode(code);
+        return match;
       });
   }
 
   function htmlToPlain(value) {
-    return decodeEntities(String(value || '')
+    var s = String(value || '');
+    s = s
       .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<br\s*\/?\s*>/gi, '\n')
@@ -68,18 +58,41 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
       .replace(/<\/div>/gi, '\n')
       .replace(/<\/li>/gi, '\n')
       .replace(/<li[^>]*>/gi, '- ')
+      .replace(/<img[^>]*>/gi, ' ')
       .replace(/<[^>]*>/g, ' ')
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/\n[ \t]+/g, '\n')
-      .replace(/\n{3,}/g, '\n\n'))
-      .trim();
+      .replace(/\n{3,}/g, '\n\n');
+    return decodeEntities(s).trim();
+  }
+
+  function firstImageFromHtml(html) {
+    var s = String(html || '');
+    var m = s.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
+    if (m && m[1]) return decodeEntities(m[1]);
+    return '';
   }
 
   function getAsync(obj, prop, done) {
+    var finished = false;
+    function finish(value) {
+      if (finished) return;
+      finished = true;
+      done(value || '');
+    }
     try {
-      obj.get(prop, function (value) { done(value || ''); });
+      var direct = obj.get(prop, function (value) {
+        finish(value || '');
+      });
+      if (typeof direct === 'string' && direct.length) {
+        finish(direct);
+      }
+      if (direct !== undefined && direct !== null && typeof direct !== 'function' && prop !== 'bio' && prop !== 'gmnotes' && prop !== 'notes') {
+        finish(direct);
+      }
+      setTimeout(function () { finish(''); }, 2500);
     } catch (e) {
-      try { done(obj.get(prop) || ''); } catch (err) { done(''); }
+      try { finish(obj.get(prop) || ''); } catch (err) { finish(''); }
     }
   }
 
@@ -87,7 +100,10 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
     var index = 0;
     var results = [];
     function next() {
-      if (index >= items.length) return done(results);
+      if (index >= items.length) {
+        done(results);
+        return;
+      }
       iterator(items[index], function (result) {
         if (result) results.push(result);
         index += 1;
@@ -105,8 +121,7 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
       includeGmNotes: false,
       selectedOnly: false
     };
-    var parts = String(content || '').split(/\s+/).slice(1);
-    parts.forEach(function (p) {
+    String(content || '').split(/\s+/).slice(1).forEach(function (p) {
       if (p === '--characters') opts.includeHandouts = false;
       if (p === '--handouts') opts.includeCharacters = false;
       if (p === '--all') opts.includeArchived = true;
@@ -132,49 +147,68 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
   }
 
   function exportCharacter(ch, opts, done) {
-    getAsync(ch, 'bio', function (bio) {
-      getAsync(ch, 'gmnotes', function (gmnotes) {
+    getAsync(ch, 'bio', function (bioHtml) {
+      getAsync(ch, 'gmnotes', function (gmHtml) {
+        var avatar = ch.get('avatar') || firstImageFromHtml(bioHtml) || '';
+        var bioText = htmlToPlain(bioHtml);
         var row = {
           id: ch.id,
           roll20Id: ch.id,
+          sourceId: ch.id,
           type: 'character',
+          kind: 'character',
           name: ch.get('name') || 'Personagem sem nome',
-          bio: htmlToPlain(bio),
-          imageUrl: ch.get('avatar') || '',
-          avatar: ch.get('avatar') || '',
+          imageUrl: avatar,
+          avatar: avatar,
+          bio: bioText,
+          bioText: bioText,
+          bioHtml: bioHtml || '',
           controlledby: ch.get('controlledby') || '',
           inplayerjournals: ch.get('inplayerjournals') || '',
           archived: isArchived(ch)
         };
-        if (opts.includeGmNotes) row.gmnotes = htmlToPlain(gmnotes);
+        if (opts.includeGmNotes) {
+          row.gmnotes = htmlToPlain(gmHtml);
+          row.gmnotesHtml = gmHtml || '';
+        }
         done(row);
       });
     });
   }
 
   function exportHandout(ho, opts, done) {
-    getAsync(ho, 'notes', function (notes) {
-      getAsync(ho, 'gmnotes', function (gmnotes) {
+    getAsync(ho, 'notes', function (notesHtml) {
+      getAsync(ho, 'gmnotes', function (gmHtml) {
+        var avatar = ho.get('avatar') || firstImageFromHtml(notesHtml) || '';
+        var notesText = htmlToPlain(notesHtml);
         var row = {
           id: ho.id,
           roll20Id: ho.id,
+          sourceId: ho.id,
           type: 'handout',
+          kind: 'handout',
           name: ho.get('name') || 'Folheto sem título',
-          bio: htmlToPlain(notes),
-          content: htmlToPlain(notes),
-          imageUrl: ho.get('avatar') || '',
-          avatar: ho.get('avatar') || '',
+          imageUrl: avatar,
+          avatar: avatar,
+          bio: notesText,
+          content: notesText,
+          notesText: notesText,
+          notesHtml: notesHtml || '',
           inplayerjournals: ho.get('inplayerjournals') || '',
+          controlledby: ho.get('controlledby') || '',
           archived: isArchived(ho)
         };
-        if (opts.includeGmNotes) row.gmnotes = htmlToPlain(gmnotes);
+        if (opts.includeGmNotes) {
+          row.gmnotes = htmlToPlain(gmHtml);
+          row.gmnotesHtml = gmHtml || '';
+        }
         done(row);
       });
     });
   }
 
   function makePayload(charRows, handoutRows, opts) {
-    var campaign = Campaign && Campaign();
+    var campaign = (typeof Campaign === 'function') ? Campaign() : null;
     return {
       source: 'roll20-api-script',
       exporter: 'cronicas-do-eter',
@@ -184,6 +218,10 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
       campaign: {
         name: campaign ? (campaign.get('name') || '') : '',
         playerPageId: campaign ? (campaign.get('playerpageid') || '') : ''
+      },
+      counts: {
+        characters: (charRows || []).length,
+        handouts: (handoutRows || []).length
       },
       characters: charRows || [],
       handouts: handoutRows || []
@@ -202,20 +240,22 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
     var html = '' +
       '<h3>Crônicas do Éter — Export Roll20</h3>' +
       '<p><b>Data:</b> ' + escapeHtml(payload.exportedAt) + '</p>' +
+      '<p><b>Personagens:</b> ' + payload.characters.length + ' | <b>Folhetos:</b> ' + payload.handouts.length + '</p>' +
       '<p>Copie todo o texto abaixo e cole na página <b>Mesas Roll20</b> do site.</p>' +
-      '<textarea style="width:100%;height:560px;white-space:pre;font-family:monospace;font-size:12px;">' + escapeHtml(json) + '</textarea>';
+      '<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;border:1px solid #999;padding:8px;max-height:600px;overflow:auto;">' + escapeHtml(json) + '</pre>';
 
     handout.set('notes', html);
-    whisper('Exportação concluída. Abra o handout <b>' + EXPORT_HANDOUT_NAME + '</b>, copie o JSON e cole no site. Personagens: <b>' + payload.characters.length + '</b>. Folhetos: <b>' + payload.handouts.length + '</b>.');
+    try { handout.set('gmnotes', json); } catch (e) {}
+    whisper('Exportação concluída.<br>Personagens: <b>' + payload.characters.length + '</b><br>Folhetos: <b>' + payload.handouts.length + '</b><br>Abra o handout <b>' + EXPORT_HANDOUT_NAME + '</b>, copie o JSON e cole no site.');
   }
 
   function exportAll(msg) {
     var opts = parseOptions(msg.content);
-    whisper('Exportando. Aguarde alguns segundos...');
+    whisper('Exportando Bio & Info dos personagens e Notes dos folhetos. Aguarde alguns segundos...');
 
     var allowedSelected = opts.selectedOnly ? selectedCharacterIds(msg) : null;
     if (opts.selectedOnly && Object.keys(allowedSelected).length === 0) {
-      whisper('Nenhum token selecionado representa um personagem. Selecione tokens com personagem vinculado ou use <code>!cde-export</code>.');
+      whisper('Nenhum token selecionado representa um personagem. Selecione tokens vinculados ou use <code>!cde-export</code>.');
       return;
     }
 
@@ -259,8 +299,8 @@ var CDE_ROLL20_EXPORTER = CDE_ROLL20_EXPORTER || (function () {
   });
 
   on('ready', function () {
-    log('Crônicas do Éter — Roll20 Exporter v' + VERSION + ' carregado. Use !cde-export no chat.');
+    log('CDE Roll20 Exporter v' + VERSION + ' carregado.');
   });
 
-  return { exportAll: exportAll, help: help };
+  return {};
 }());
