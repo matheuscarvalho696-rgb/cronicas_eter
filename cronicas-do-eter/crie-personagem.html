@@ -790,4 +790,143 @@ if (saveBtn) {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', installV28); else installV28();
 })();
 </script>
+<script>
+/* SPRINT 4 v29 — correção de vitalidades: remove dados base acumulados, soma focos e talentos de vitalidade. */
+(function(){
+  const CLASS_LEVEL_BONUS_V29 = {
+    "Arqueiro":{vida:4,mana:6,energia:15},"Bárbaro":{vida:5,mana:4,energia:16},"Bardo":{vida:4,mana:14,energia:7},
+    "Bruxo":{vida:4,mana:15,energia:6},"Clérigo":{vida:5,mana:8,energia:7},"Feiticeiro":{vida:4,mana:13,energia:8},
+    "Guerreiro":{vida:5,mana:2,energia:13},"Ladino":{vida:4,mana:6,energia:15},"Mago":{vida:4,mana:17,energia:4},
+    "Monge":{vida:5,mana:7,energia:8},"Paladino":{vida:7,mana:7,energia:12}
+  };
+  const CLASS_ATTR_BONUS_V29 = {
+    "Arqueiro":{vida:2,mana:3,energia:7},"Bárbaro":{vida:2,mana:3,energia:7},"Bardo":{vida:2,mana:7,energia:3},
+    "Bruxo":{vida:2,mana:7,energia:3},"Clérigo":{vida:2,mana:5,energia:5},"Feiticeiro":{vida:2,mana:7,energia:3},
+    "Guerreiro":{vida:2,mana:3,energia:7},"Ladino":{vida:2,mana:3,energia:7},"Mago":{vida:2,mana:7,energia:3},
+    "Monge":{vida:2,mana:5,energia:5},"Paladino":{vida:3,mana:4,energia:4}
+  };
+  const RANK_VITALITY_V29 = {D:0,C:5,B:15,A:35,S:65,SSS:125};
+  const RANK_DIRECT_V29 = {
+    D:{atributos:10,foco:4,pericias:14,especial:4,status:1,nivel:0,danoElemental:1,vitalidade:0},
+    C:{atributos:20,foco:15,pericias:20,especial:8,status:4,nivel:5,danoElemental:4,vitalidade:5},
+    B:{atributos:40,foco:30,pericias:40,especial:16,status:8,nivel:9,danoElemental:7,vitalidade:15},
+    A:{atributos:80,foco:60,pericias:60,especial:32,status:12,nivel:13,danoElemental:10,vitalidade:35},
+    S:{atributos:130,foco:90,pericias:90,especial:60,status:12,nivel:16,danoElemental:13,vitalidade:65},
+    SSS:{atributos:184,foco:140,pericias:120,especial:60,status:12,nivel:20,danoElemental:16,vitalidade:125}
+  };
+  const FOCUS_BONUS_V29 = {
+    "Mentalismo":{vida:0,mana:10,energia:0},
+    "Místico":{vida:0,mana:8,energia:2},
+    "Domínio":{vida:0,mana:6,energia:4},
+    "Encantamento":{vida:0,mana:4,energia:6},
+    "Fortaleza":{vida:0,mana:0,energia:10}
+  };
+  const $ = id => document.getElementById(id);
+  const n = v => Number(v)||0;
+  const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const getClass = () => $('classSelect')?.value || '';
+  const getRace = () => $('raceSelect')?.value || '';
+  const getRank = () => $('rankSelect')?.value || 'D';
+  const level = () => Math.max(0, Math.min(60, n($('characterLevel')?.value)));
+  function pointObject(prefix){ const out={}; document.querySelectorAll(`[data-point-group="${prefix}"]`).forEach(i=>out[i.dataset.pointName]=n(i.value)); return out; }
+  function attr(obj,name){ return n(obj[name] ?? obj[Object.keys(obj).find(k=>norm(k)===norm(name))] ?? 0); }
+  function avgDie(die){ const m=String(die||'').match(/d(\d+)/i); return m ? Math.ceil((1+Number(m[1]))/2) : 0; }
+  function raceBaseSafe(r){ try { return (typeof raceBase !== 'undefined' && raceBase[r]) ? raceBase[r] : {}; } catch(e){ return {}; } }
+  function classDataSafe(c){ try { return (typeof classData !== 'undefined' && classData[c]) ? classData[c] : {}; } catch(e){ return {}; } }
+  function selectedTalentsV29(){ return [...document.querySelectorAll('#talentOptions select')].map(s=>s.value).filter(Boolean); }
+  function selectedWeaponV29(){ const idx=$('weaponSelect')?.value; try { return idx===''||idx==null ? null : (MARKET_WEAPONS_V26?.[Number(idx)] || window.MARKET_WEAPONS_V26?.[Number(idx)] || null); } catch(e){ return null; } }
+  function selectedArmorV29(){ const idx=$('armorSelect')?.value; try { return idx===''||idx==null ? null : (MARKET_ARMORS_V26?.[Number(idx)] || window.MARKET_ARMORS_V26?.[Number(idx)] || null); } catch(e){ return null; } }
+  function focusVitality(focos){
+    const total={vida:0,mana:0,energia:0,detalhes:[]};
+    Object.entries(FOCUS_BONUS_V29).forEach(([nome,b])=>{
+      const pts=attr(focos,nome);
+      if(!pts) return;
+      const add={vida:pts*b.vida,mana:pts*b.mana,energia:pts*b.energia};
+      total.vida+=add.vida; total.mana+=add.mana; total.energia+=add.energia;
+      total.detalhes.push(`${nome}: ${pts} ponto(s) = +${add.mana} mana / +${add.energia} energia`);
+    });
+    return total;
+  }
+  function talentVitality(talents,lvl){
+    const total={vida:0,mana:0,energia:0,detalhes:[]};
+    if(talents.includes('Robusto')) { total.vida += 2*lvl; total.detalhes.push(`Robusto: +${2*lvl} vida (${lvl} nível × 2)`); }
+    if(talents.includes('Foco de Mana')) { total.mana += 4*lvl; total.detalhes.push(`Foco de Mana: +${4*lvl} mana (${lvl} nível × 4)`); }
+    if(talents.includes('Energético')) { total.energia += 4*lvl; total.detalhes.push(`Energético: +${4*lvl} energia (${lvl} nível × 4)`); }
+    return total;
+  }
+  function computeSimulationV29(){
+    const cls=getClass(), race=getRace(), lvl=level(), rank=getRank();
+    const rb=raceBaseSafe(race), cd=classDataSafe(cls);
+    const attrs=pointObject('attr'), focos=pointObject('foco'), especiais=pointObject('especial');
+    const vigor=attr(attrs,'Vigor'), forca=attr(attrs,'Força'), destreza=attr(attrs,'Destreza'), inteligencia=attr(attrs,'Inteligência');
+    const rankData=RANK_DIRECT_V29[rank]||RANK_DIRECT_V29.D;
+    const levelBonus=CLASS_LEVEL_BONUS_V29[cls]||{vida:0,mana:0,energia:0};
+    const attrBonus=CLASS_ATTR_BONUS_V29[cls]||{vida:0,mana:0,energia:0};
+    const dice={vida:cd.vida||'1d0', mana:cd.mana||'1d0', energia:cd.energia||'1d0'};
+    const inicial={vida:n(rb.vit?.vida)+n(cd.vit?.vida), mana:n(rb.vit?.mana)+n(cd.vit?.mana), energia:n(rb.vit?.energia)+n(cd.vit?.energia)};
+    const nivelCalc={vida:levelBonus.vida*lvl, mana:levelBonus.mana*lvl, energia:levelBonus.energia*lvl};
+    const atributoCalc={vida:vigor*attrBonus.vida, mana:inteligencia*attrBonus.mana, energia:forca*attrBonus.energia};
+    // A pedido: não usar dados base acumulados por nível. Cada ponto no atributo rola 1 dado da vitalidade correspondente.
+    const dadoCalc={vida:vigor*avgDie(dice.vida), mana:inteligencia*avgDie(dice.mana), energia:forca*avgDie(dice.energia)};
+    const focoCalc=focusVitality(focos);
+    const talentos=selectedTalentsV29();
+    const talentoCalc=talentVitality(talentos,lvl);
+    const graduacao={vida:RANK_VITALITY_V29[rank]||0,mana:RANK_VITALITY_V29[rank]||0,energia:RANK_VITALITY_V29[rank]||0};
+    const total={
+      vida:inicial.vida+nivelCalc.vida+atributoCalc.vida+dadoCalc.vida+focoCalc.vida+talentoCalc.vida+graduacao.vida,
+      mana:inicial.mana+nivelCalc.mana+atributoCalc.mana+dadoCalc.mana+focoCalc.mana+talentoCalc.mana+graduacao.mana,
+      energia:inicial.energia+nivelCalc.energia+atributoCalc.energia+dadoCalc.energia+focoCalc.energia+talentoCalc.energia+graduacao.energia,
+      regeneracao:n($('distRegeneracao')?.value)
+    };
+    const w=selectedWeaponV29(), a=selectedArmorV29();
+    const caf=n(a?.caf), car=n(a?.car), resistencia=n(a?.resistencia), hit=n(w?.hit), dmg=n(w?.damageBonus);
+    return {rank,nivel:lvl,rankData,pontosAtuais:{atributos:attrs,focos,especiais,regeneracao:total.regeneracao},pontosDistribuicaoDireta:rankData,
+      vitalidadesIniciais:inicial,vitalidadesNivel:nivelCalc,vitalidadesAtributo:atributoCalc,vitalidadesDado:dadoCalc,vitalidadesFoco:focoCalc,vitalidadesTalento:talentoCalc,vitalidadesGraduacao:graduacao,
+      dadosClasse:{vida:dice.vida,mana:dice.mana,energia:dice.energia,mediaVida:avgDie(dice.vida),mediaMana:avgDie(dice.mana),mediaEnergia:avgDie(dice.energia)}, vitalidadesSimuladas:total,
+      breakdown:{
+        vida:`${inicial.vida} inicial + ${nivelCalc.vida} nível + ${atributoCalc.vida} atributo + ${dadoCalc.vida} dado + ${talentoCalc.vida} talentos + ${graduacao.vida} graduação`,
+        mana:`${inicial.mana} inicial + ${nivelCalc.mana} nível + ${atributoCalc.mana} atributo + ${dadoCalc.mana} dado + ${focoCalc.mana} focos + ${talentoCalc.mana} talentos + ${graduacao.mana} graduação`,
+        energia:`${inicial.energia} inicial + ${nivelCalc.energia} nível + ${atributoCalc.energia} atributo + ${dadoCalc.energia} dado + ${focoCalc.energia} focos + ${talentoCalc.energia} talentos + ${graduacao.energia} graduação`
+      }, equipamentos:{arma:w,armadura:a,caf,car,resistencia,bonusAcerto:hit,bonusDano:dmg},
+      combate:{caFortitude:10+caf+Math.floor(vigor/2),caReflexos:10+car+Math.floor(destreza/2),resistencia,acertoSimulado:hit+Math.floor(Math.max(forca,destreza,inteligencia)/2),danoBonus:dmg}, talentos};
+  }
+  function appendSimulationV29(){
+    const sheet=$('quickSheet'); if(!sheet) return;
+    document.querySelectorAll('#quickSheet .sim-box').forEach(el=>el.remove());
+    const sim=computeSimulationV29(), r=sim.rankData;
+    const focoText=sim.vitalidadesFoco.detalhes.length ? sim.vitalidadesFoco.detalhes.join('; ') : 'nenhum bônus de vitalidade por foco';
+    const talentText=sim.vitalidadesTalento.detalhes.length ? sim.vitalidadesTalento.detalhes.join('; ') : 'nenhum talento de vitalidade selecionado';
+    const html=`<div class="sim-box"><h4>Simulação Premium — Fórmula Oficial v29</h4><ul>
+      <li><strong>Ranque ${sim.rank}</strong>: Atributos ${r.atributos}, Focos ${r.foco}, Perícias ${r.pericias}, Especiais ${r.especial}, Status ${r.status}, Dano Elemental ${r.danoElemental}, Vitalidade de Graduação +${r.vitalidade}.</li>
+      <li>Classe principal usada para todos os cálculos de vitalidade: <strong>${getClass()}</strong>. Subclasse não altera vida, mana ou energia.</li>
+      <li>Dados da classe: Vida ${sim.dadosClasse.vida} (média ${sim.dadosClasse.mediaVida}), Mana ${sim.dadosClasse.mana} (média ${sim.dadosClasse.mediaMana}), Energia ${sim.dadosClasse.energia} (média ${sim.dadosClasse.mediaEnergia}).</li>
+      <li>Focos: ${focoText}.</li>
+      <li>Talentos de vitalidade: ${talentText}.</li>
+      <li>Vida: <strong>${sim.vitalidadesSimuladas.vida}</strong> <span class="sheet-muted">(${sim.breakdown.vida})</span></li>
+      <li>Mana: <strong>${sim.vitalidadesSimuladas.mana}</strong> <span class="sheet-muted">(${sim.breakdown.mana})</span></li>
+      <li>Energia: <strong>${sim.vitalidadesSimuladas.energia}</strong> <span class="sheet-muted">(${sim.breakdown.energia})</span></li>
+      <li>Equipamento: ${sim.equipamentos.arma?sim.equipamentos.arma.name:'sem arma'} / ${sim.equipamentos.armadura?sim.equipamentos.armadura.name:'sem armadura'}</li>
+      <li>CAF: ${sim.combate.caFortitude} | CAR: ${sim.combate.caReflexos} | Resistência: ${sim.combate.resistencia} | Acerto: +${sim.combate.acertoSimulado} | Dano base da arma: +${sim.combate.danoBonus}</li>
+      <li>Talentos escolhidos: ${sim.talentos.length?sim.talentos.join(', '):'nenhum'}</li>
+    </ul></div>`;
+    sheet.insertAdjacentHTML('beforeend',html);
+  }
+  function installV29(){
+    const previousPayload=window.getCharacterPayload;
+    window.getCharacterPayload=function(){
+      const p=(typeof previousPayload==='function') ? previousPayload() : {};
+      const sim=computeSimulationV29();
+      p.rankInicial=sim.rank; p.talentos=sim.talentos; p.pontosDistribuicaoDireta=sim.pontosDistribuicaoDireta; p.simulacao=sim; p.equipamentosSimulados=sim.equipamentos;
+      return p;
+    };
+    const previousRender=window.renderSheet;
+    window.renderSheet=function(){ if(typeof previousRender==='function') previousRender(); appendSimulationV29(); };
+    ['rankSelect','characterLevel','distRegeneracao','weaponSelect','armorSelect'].forEach(id=>{ const el=$(id); if(el){ el.addEventListener('input',()=>window.renderSheet&&window.renderSheet()); el.addEventListener('change',()=>window.renderSheet&&window.renderSheet()); }});
+    document.querySelectorAll('[data-point-group], #talentOptions select').forEach(el=>{ el.addEventListener('input',()=>window.renderSheet&&window.renderSheet()); el.addEventListener('change',()=>window.renderSheet&&window.renderSheet()); });
+    if(window.renderSheet) window.renderSheet();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installV29); else installV29();
+})();
+</script>
+
 </body></html>
