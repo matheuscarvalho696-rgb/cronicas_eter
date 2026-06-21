@@ -825,6 +825,38 @@ export async function deleteRoll20Table(tableId) {
   await createLog("roll20.table_deleted", { tableId, name: data.name || "" });
 }
 
+async function findExistingRoll20Import({ tableId, kind, sourceId }) {
+  const { db } = getFirebase();
+  const q = query(collection(db, "roll20Imports"), where("sourceId", "==", cleanText(sourceId)));
+  const snap = await getDocs(q);
+  let found = null;
+  snap.forEach(d => {
+    const data = d.data();
+    if (!found && cleanText(data.tableId) === cleanText(tableId) && cleanText(data.kind) === cleanText(kind)) {
+      found = { id: d.id, ...data };
+    }
+  });
+  return found;
+}
+
+async function syncClaimedCharacterFromImport(importId, itemData) {
+  const { db } = getFirebase();
+  if (!itemData || !itemData.claimedCharacterId) return;
+  const charRef = doc(db, "characters", itemData.claimedCharacterId);
+  const charSnap = await getDoc(charRef).catch(() => null);
+  if (!charSnap || !charSnap.exists()) return;
+  await updateDoc(charRef, {
+    nome: cleanText(itemData.name, "Personagem Roll20"),
+    roll20Bio: cleanText(itemData.bio),
+    roll20ImageUrl: cleanRoll20Image(itemData.imageUrl),
+    resumo: {
+      ...(charSnap.data().resumo || {}),
+      dica: cleanText(itemData.bio).slice(0, 500)
+    },
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function importRoll20Selection({ tableId, campaignId, characters = [], handouts = [] }) {
   const { db } = getFirebase();
   const user = await requireAdminUser();
@@ -834,6 +866,8 @@ export async function importRoll20Selection({ tableId, campaignId, characters = 
   if (!allItems.length) throw new Error("Selecione pelo menos um personagem ou folheto para importar.");
 
   const savedIds = [];
+  let created = 0;
+  let updated = 0;
   for (const item of allItems) {
     const payload = {
       ownerUid: user.uid,
@@ -848,14 +882,103 @@ export async function importRoll20Selection({ tableId, campaignId, characters = 
       category: item.category,
       tags: item.tags,
       visible: item.visible,
-      importedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
-    const ref = await addDoc(collection(db, "roll20Imports"), payload);
-    savedIds.push(ref.id);
+
+    const existing = await findExistingRoll20Import({ tableId, kind: item.kind, sourceId: item.sourceId });
+    if (existing) {
+      const ref = doc(db, "roll20Imports", existing.id);
+      await updateDoc(ref, payload);
+      savedIds.push(existing.id);
+      updated++;
+      await syncClaimedCharacterFromImport(existing.id, { ...existing, ...payload });
+    } else {
+      const ref = await addDoc(collection(db, "roll20Imports"), {
+        ...payload,
+        importedAt: serverTimestamp(),
+        claimedByUid: "",
+        claimedByEmail: "",
+        claimedCharacterId: ""
+      });
+      savedIds.push(ref.id);
+      created++;
+    }
   }
-  await createLog("roll20.selection_imported", { tableId: cleanText(tableId), total: savedIds.length });
-  return savedIds;
+  await createLog("roll20.selection_synced", { tableId: cleanText(tableId), total: savedIds.length, created, updated });
+  return { ids: savedIds, created, updated };
+}
+
+export async function claimRoll20Character(importId) {
+  const { db } = getFirebase();
+  const user = requireCurrentUser();
+  if (!importId) throw new Error("Personagem inválido.");
+  const importRef = doc(db, "roll20Imports", importId);
+  const importSnap = await getDoc(importRef);
+  if (!importSnap.exists()) throw new Error("Personagem não encontrado.");
+  const data = importSnap.data();
+  if (data.kind !== "character") throw new Error("Apenas personagens podem ser reivindicados.");
+  if (normalizeRoll20Category(data.category) !== "Jogadores") throw new Error("Apenas personagens da categoria Jogadores podem ser reivindicados.");
+  if (data.visible === false) throw new Error("Este personagem está oculto.");
+  if (data.claimedByUid && data.claimedByUid !== user.uid) throw new Error("Este personagem já foi reivindicado por outro jogador.");
+
+  let characterId = data.claimedCharacterId || "";
+  if (!characterId) {
+    const q = query(collection(db, "characters"), where("ownerUid", "==", user.uid));
+    const snap = await getDocs(q);
+    snap.forEach(d => { if (!characterId && d.data().roll20ImportId === importId) characterId = d.id; });
+  }
+
+  const characterPayload = {
+    ownerUid: user.uid,
+    ownerEmail: normalizeEmail(user.email || ""),
+    nome: cleanText(data.name, "Personagem Roll20"),
+    raca: "",
+    variante: "",
+    classe: "",
+    subclasse: "",
+    especializacao: "",
+    elementoNatural: "",
+    rankInicial: "D",
+    talentos: [],
+    distribuicaoInicial: {},
+    pontosDistribuicaoDireta: {},
+    simulacao: {},
+    equipamentosSimulados: {},
+    resumo: { dica: cleanText(data.bio).slice(0, 500) },
+    roll20ImportId: importId,
+    roll20SourceId: cleanText(data.sourceId),
+    roll20TableId: cleanText(data.tableId),
+    roll20Bio: cleanText(data.bio),
+    roll20ImageUrl: cleanRoll20Image(data.imageUrl),
+    updatedAt: serverTimestamp()
+  };
+
+  if (characterId) {
+    await updateDoc(doc(db, "characters", characterId), characterPayload);
+  } else {
+    const charRef = await addDoc(collection(db, "characters"), {
+      ...characterPayload,
+      createdAt: serverTimestamp()
+    });
+    characterId = charRef.id;
+  }
+
+  await updateDoc(importRef, {
+    claimedByUid: user.uid,
+    claimedByEmail: normalizeEmail(user.email || ""),
+    claimedCharacterId: characterId,
+    claimedAt: data.claimedAt || serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  await updateDoc(doc(db, "users", user.uid), {
+    "character.hasCharacter": true,
+    "character.nome": characterPayload.nome,
+    updatedAt: serverTimestamp()
+  }).catch(()=>{});
+
+  await createLog("roll20.character_claimed", { importId, characterId, name: characterPayload.nome });
+  return characterId;
 }
 
 export async function listMyRoll20Imports() {
