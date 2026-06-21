@@ -760,8 +760,13 @@ function getDesiredRowsByCategory(){
   document.querySelectorAll('.range-line').forEach(line=>{
     const name=(line.querySelector('.range-name')?.childNodes?.[0]?.textContent || line.querySelector('.range-name')?.textContent || '').trim();
     const desired=line.querySelector('[data-kind="desired"]');
+    const current=line.querySelector('[data-kind="current"]');
     if(!desired || !name) return;
-    const value=Number(desired.value)||0;
+    const desiredRaw=String(desired.value ?? '').trim();
+    const currentValue=Number(current?.value)||0;
+    // Regra oficial do site: desejado vazio ou 0 mantém o valor atual do personagem carregado.
+    const parsed=Number(desiredRaw);
+    const value=(!desiredRaw || parsed<=0) ? currentValue : parsed;
     if(attrs.includes(name)) out.atributos[name]=value;
     else if(focos.includes(name)) out.focos[name]=value;
     else if(especiais.includes(name)) out.especiais[name]=value;
@@ -787,25 +792,37 @@ function hasPremiumToolAccess(profile){
 async function persistValidatedDistribution(lines){
   if (savingDistribution) return;
   savingDistribution = true;
+  const xpSpent = Number((document.getElementById('xpSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
+  const ptSpent = Number((document.getElementById('ptSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
+  const linkedCharacter = Number.isInteger(loadedCharacterIndex) ? loadedCharacters[loadedCharacterIndex] : null;
+  const characterUpdate = linkedCharacter ? buildCharacterUpdateFromDesired(linkedCharacter) : null;
+  const payload = {
+    title: 'Distribuição XP/PT - ' + new Date().toLocaleString('pt-BR'),
+    xpSpent,
+    ptSpent,
+    xpLeft: document.getElementById('xpLeft')?.textContent || '0',
+    ptLeft: document.getElementById('ptLeft')?.textContent || '0',
+    lines: lines || [],
+    linkedCharacterId: linkedCharacter?.id || '',
+    characterUpdate,
+    createdAtLocal: new Date().toISOString()
+  };
   try {
     if (!hasPremiumToolAccess(currentProfile)) return;
-    const xpSpent = Number((document.getElementById('xpSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
-    const ptSpent = Number((document.getElementById('ptSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
-    const linkedCharacter = Number.isInteger(loadedCharacterIndex) ? loadedCharacters[loadedCharacterIndex] : null;
-    const characterUpdate = linkedCharacter ? buildCharacterUpdateFromDesired(linkedCharacter) : null;
-    await saveDistribution({
-      title: 'Distribuição XP/PT - ' + new Date().toLocaleString('pt-BR'),
-      xpSpent,
-      ptSpent,
-      xpLeft: document.getElementById('xpLeft')?.textContent || '0',
-      ptLeft: document.getElementById('ptLeft')?.textContent || '0',
-      lines: lines || [],
-      linkedCharacterId: linkedCharacter?.id || '',
-      characterUpdate
-    });
+    const savedId = await saveDistribution(payload);
+    payload.id = savedId;
+    payload.savedInFirebase = true;
   } catch (err) {
-    console.warn('Não foi possível salvar a distribuição:', err);
+    console.warn('Não foi possível salvar a distribuição no Firebase. Salvando cópia local:', err);
+    payload.savedInFirebase = false;
+    payload.error = String(err?.message || err || 'Erro desconhecido');
   } finally {
+    try {
+      const key='cronicasLocalDistributions';
+      const existing=JSON.parse(localStorage.getItem(key)||'[]');
+      existing.unshift(payload);
+      localStorage.setItem(key, JSON.stringify(existing.slice(0,50)));
+    } catch(e) { console.warn('Não foi possível salvar distribuição local:', e); }
     savingDistribution = false;
   }
 }

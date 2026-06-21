@@ -76,23 +76,102 @@ const askBtn=document.getElementById('askBtn');
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function canUse(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master');}
 const KB=[
-  {keys:['vida','mana','energia','vitalidade','vigor','força','inteligência'], title:'Cálculo de vitalidades', answer:'A vitalidade é calculada pela soma de: vitalidade inicial da raça + vitalidade inicial da classe principal + vitalidade por nível da classe principal + bônus do atributo correspondente + bônus dos focos + bônus da graduação + talentos relevantes. A subclasse não altera vitalidades. Vigor afeta Vida, Força afeta Energia e Inteligência afeta Mana.'},
-  {keys:['xp','pt','distribuição','calculadora','validar'], title:'Distribuição de XP/PT', answer:'Na Calculadora XP/PT, o valor Atual representa a ficha existente e o Desejado representa onde o personagem quer chegar. Ao validar com um personagem carregado, os valores desejados de atributos, focos, atributos especiais e regeneração passam a ser os novos valores atuais do personagem. A validação também deve aparecer em Minhas Distribuições.'},
-  {keys:['talento','talentos','livre','classe','incomum','raro','lendário'], title:'Talentos', answer:'Talentos representam vantagens permanentes. Existem talentos livres, talentos de classe, talentos incomuns, raros e lendários. Alguns possuem níveis evolutivos. No criador de personagem, os talentos devem ser filtrados pelos talentos livres e pelas classes escolhidas.'},
-  {keys:['familiar','familiares','habilidade de familiar'], title:'Familiares', answer:'Familiares são companheiros vinculados ao personagem. O sistema permite montar o familiar, gerar habilidades de familiar por graduação e salvar familiares na conta. A ferramenta de familiar permanece acessível também para visitantes, mas salvar exige login.'},
-  {keys:['mercado','arma','armadura','equipamento','resistência','caf','car','acerto'], title:'Equipamentos e combate', answer:'Armas podem conceder bônus de acerto e dano. Armaduras podem conceder CAF, CAR e resistência. A resistência base simulada usa Vigor/2 somado ao bônus da armadura. Focos arcanos e instrumentos musicais também contam como equipamentos selecionáveis.'},
+  {keys:['ração','racao','comida','alimento','viagem'], title:'Ração e alimento', answer:'Ração é um item de sustento usado em viagens e sobrevivência. Se a pergunta for sobre preço ou quantidade, consulte também o Mercado; o assistente procura o termo nas páginas do compêndio quando a resposta exata não estiver nesta base rápida.'},
+  {keys:['vida','mana','energia','vitalidade','vigor','força','inteligência'], title:'Cálculo de vitalidades', answer:'A vitalidade é calculada por: vitalidade inicial da raça + vitalidade inicial da classe principal + vitalidade por nível da classe principal + vitalidade concedida por atributos + vitalidade concedida por focos + vitalidade de graduação + talentos aplicáveis. A subclasse não altera as vitalidades. Vigor afeta Vida, Força afeta Energia e Inteligência afeta Mana.'},
+  {keys:['xp','pt','distribuição','distribuicao','calculadora','validar'], title:'Distribuição de XP/PT', answer:'Na Calculadora XP/PT, Atual representa a ficha existente e Desejado representa onde o personagem quer chegar. Se o campo Desejado estiver vazio ou 0, o valor Atual é mantido. Ao validar com personagem carregado, a distribuição é registrada e os valores desejados válidos passam a ser os novos valores do personagem.'},
+  {keys:['talento','talentos','livre','classe','incomum','raro','lendário','lendario'], title:'Talentos', answer:'Talentos são vantagens permanentes. Existem talentos livres, talentos de classe, talentos incomuns, raros e lendários. Alguns talentos possuem níveis evolutivos. No criador de personagem, os talentos são escolhidos por selects e filtrados pelos talentos livres e pelas classes escolhidas.'},
+  {keys:['familiar','familiares','habilidade de familiar'], title:'Familiares', answer:'Familiares são companheiros vinculados ao personagem. O sistema permite montar o familiar, gerar habilidades por graduação e salvar familiares na conta. Visitantes podem criar familiar; salvar exige login.'},
+  {keys:['mercado','arma','armadura','equipamento','resistência','resistencia','caf','car','acerto'], title:'Equipamentos e combate', answer:'Armas podem conceder bônus de acerto e dano. Armaduras podem conceder CAF, CAR e resistência. A resistência simulada usa Vigor/2 + bônus de resistência da armadura. Focos arcanos e instrumentos musicais também contam como equipamentos selecionáveis.'},
   {keys:['concentração','concentracao','conjuração','conjuracao','ação','acao'], title:'Concentração e ações', answer:'Concentração ocorre quando uma habilidade exige mais ações do que o personagem possui disponíveis. Apenas uma habilidade pode ser concentrada por vez. Sofrer dano pode exigir teste de Sabedoria para manter concentração. Ação de Conjuração é limitada a uma por rodada.'},
-  {keys:['efeito','condição','condicao','positivo','negativo','status'], title:'Efeitos e condições', answer:'Efeitos positivos fortalecem o personagem, efeitos negativos enfraquecem e condições representam estados especiais. Efeitos iguais não acumulam, versões superiores substituem inferiores, e condições geralmente não são anuladas por imunidades comuns.'}
+  {keys:['aumento de ataque'], title:'Aumento de Ataque', answer:'Aumento de Ataque concede +3 para ataque direto e +1 para teste de habilidades, exceto controles e ilusões. A versão superior concede +4 para ataque direto e +2 para teste de habilidades.'},
+  {keys:['aumento de defesa'], title:'Aumento de Defesa', answer:'Aumento de Defesa concede +3 para Classe de Armadura de Fortitude e +1 contra testes de Vigor ou Força. A versão superior concede +4 e +2 respectivamente.'},
+  {keys:['aumento de esquiva'], title:'Aumento de Esquiva', answer:'Aumento de Esquiva concede +3 de Classe de Armadura de Reflexos e +1 contra testes de Destreza. A versão superior concede +4 e +2 respectivamente.'},
+  {keys:['barreira'], title:'Barreira', answer:'Barreira concede pontos de vida temporários. Diferente de outros efeitos, barreiras podem se acumular quando vêm de fontes diferentes; barreiras idênticas da mesma habilidade normalmente não se somam.'},
+  {keys:['cegueira'], title:'Cegueira', answer:'Cegueira anula Magia Controlada e faz qualquer resultado natural de 1 a 7 no d20 ser considerado falha, ignorando modificadores.'},
+  {keys:['chamas'], title:'Chamas', answer:'Chamas causa dano extra de fogo + 3d10, acumulativo e aplicado no início da próxima rodada. Vigor é usado como resistência.'},
+  {keys:['envenenamento','envenenado'], title:'Envenenamento', answer:'Envenenamento causa dano extra de água + 3d8, acumulativo e aplicado no início da próxima rodada.'},
+  {keys:['selamento'], title:'Selamento', answer:'Selamento impede o alvo de gastar pontos de Mana.'},
+  {keys:['silêncio','silencio'], title:'Silêncio', answer:'Silêncio faz todas as ações se tornarem obrigatoriamente Ação de Ataque Extra.'},
+  {keys:['amedrontar'], title:'Amedrontar', answer:'Amedrontar reduz acerto e dano. A força aumenta conforme a graduação de quem aplica: C, B e A intensificam a penalidade.'},
+  {keys:['medo'], title:'Medo', answer:'Medo é uma condição mais forte que reduz status e dano, e também diminui a dificuldade de testes impostos.'},
+  {keys:['dispel'], title:'Dispel', answer:'Dispel remove efeitos e condições positivos do alvo, conforme a descrição da habilidade.'},
+  {keys:['queda'], title:'Queda', answer:'Queda concede -5 de CA. O alvo deve gastar metade do deslocamento para se levantar.'},
+  {keys:['dano agravado'], title:'Dano Agravado', answer:'Dano Agravado ignora Redução de Dano percentual.'},
+  {keys:['dano penetrante'], title:'Dano Penetrante', answer:'Dano Penetrante ignora metade da resistência do alvo.'},
+  {keys:['dano real'], title:'Dano Real', answer:'Dano Real ignora resistência e redução de dano.'},
+  {keys:['sangramento'], title:'Sangramento', answer:'Sangramento faz o alvo perder 5% dos pontos de vida.'},
+  {keys:['tormenta'], title:'Tormenta', answer:'Tormenta faz o alvo perder 5% dos pontos de mana.'},
+  {keys:['vulnerabilidade'], title:'Vulnerabilidade', answer:'Vulnerabilidade faz o alvo sofrer 50% a mais de dano de uma fonte específica.'}
 ];
-function findAnswer(q){
-  const text=q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const COMPENDIUM_PAGES=[
+ 'index.html','racas.html','classes.html','especializacoes.html','talentos.html','habilidades.html','familiar.html','divindades.html','mercado.html','criacao-equipamentos.html',
+ 'racas/anao.html','racas/argoniano.html','racas/celestial.html','racas/daedra.html','racas/demonio.html','racas/draconato.html','racas/elfo.html','racas/humano.html','racas/mestico.html','racas/orc.html','racas/quanti.html','racas/sylvan.html',
+ 'classes/arqueiro.html','classes/barbaro.html','classes/bardo.html','classes/bruxo.html','classes/clerigo.html','classes/feiticeiro.html','classes/guerreiro.html','classes/ladino.html','classes/mago.html','classes/monge.html','classes/paladino.html'
+];
+let compendiumCache=null;
+function normalizeSearchText(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c');}
+function stripHTML(html){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  doc.querySelectorAll('script,style,nav,aside,footer').forEach(el=>el.remove());
+  return doc.body ? doc.body.innerText.replace(/\s+/g,' ').trim() : '';
+}
+async function loadCompendium(){
+  if(compendiumCache) return compendiumCache;
+  const pages=[];
+  for(const url of COMPENDIUM_PAGES){
+    try{
+      const res=await fetch(url,{cache:'force-cache'});
+      if(!res.ok) continue;
+      const text=stripHTML(await res.text());
+      pages.push({url,text,norm:normalizeSearchText(text)});
+    }catch(e){}
+  }
+  compendiumCache=pages;
+  return pages;
+}
+function queryTerms(q){
+  return normalizeSearchText(q).split(/[^a-z0-9]+/).filter(w=>w.length>2 && !['qual','quais','como','sobre','para','uma','tem','dos','das','que','isso','esse','essa','regra'].includes(w));
+}
+function extractBestSnippet(page, terms){
+  const sentences=page.text.split(/(?<=[.!?])\s+|\n+/).filter(x=>x.trim().length>30);
+  let best='',score=0;
+  for(const st of sentences){
+    const n=normalizeSearchText(st);
+    const s=terms.reduce((a,t)=>a+(n.includes(t)?1:0),0);
+    if(s>score){score=s;best=st.trim();}
+  }
+  if(!best){
+    const idx=Math.max(0,page.norm.indexOf(terms[0]||''));
+    best=page.text.slice(Math.max(0,idx-180), idx+420).trim();
+  }
+  return best.length>700 ? best.slice(0,700)+'...' : best;
+}
+async function searchCompendium(q){
+  const terms=queryTerms(q);
+  if(!terms.length) return '';
+  const pages=await loadCompendium();
+  const ranked=pages.map(p=>({p,score:terms.reduce((a,t)=>a+(p.norm.includes(t)?1:0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+  if(!ranked.length) return '';
+  const blocks=ranked.map(({p})=>`<p><strong>Fonte: ${esc(p.url)}</strong><br>${esc(extractBestSnippet(p,terms))}</p>`).join('');
+  return `<strong>Encontrei isso no compêndio:</strong>${blocks}`;
+}
+function findAnswerSync(q){
+  const text=normalizeSearchText(q);
   let best=null,score=0;
   for(const item of KB){
-    const s=item.keys.reduce((acc,k)=> text.includes(k.normalize('NFD').replace(/[\u0300-\u036f]/g,''))?acc+1:acc,0);
+    const s=item.keys.reduce((acc,k)=> text.includes(normalizeSearchText(k))?acc+1:acc,0);
     if(s>score){score=s;best=item;}
   }
   if(best) return `<strong>${esc(best.title)}</strong><br>${esc(best.answer)}`;
-  return 'Ainda não encontrei uma resposta exata na base local. Tente perguntar usando palavras-chave como: vitalidade, XP/PT, talentos, familiar, mercado, concentração, efeitos ou condições.';
+  return '';
+}
+async function findAnswer(q){
+  const quick=findAnswerSync(q);
+  const found=await searchCompendium(q);
+  if(quick && found) return quick + '<hr style="border-color:rgba(199,164,92,.25)">' + found;
+  if(quick) return quick;
+  if(found) return found;
+  return 'Ainda não encontrei uma resposta exata na base atual do site. Se esse conteúdo estiver no livro, ele precisa ser importado para as páginas/banco do compêndio para que eu consiga responder com precisão.';
 }
 function addMsg(kind,html){
   const div=document.createElement('div');
@@ -101,7 +180,7 @@ function addMsg(kind,html){
   div.innerHTML=html;
   log.appendChild(div); log.scrollTop=log.scrollHeight;
 }
-function ask(q){ if(!q.trim()) return; addMsg('user',esc(q)); addMsg('bot',findAnswer(q)); input.value=''; }
+async function ask(q){ if(!q.trim()) return; addMsg('user',esc(q)); const pending=document.createElement('div'); addMsg('bot','Consultando o compêndio...'); const answer=await findAnswer(q); log.lastElementChild.innerHTML=answer; input.value=''; }
 askBtn.addEventListener('click',()=>ask(input.value));
 input.addEventListener('keydown',e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ ask(input.value); }});
 document.querySelectorAll('.quick-question').forEach(b=>b.addEventListener('click',()=>ask(b.dataset.q||b.textContent)));

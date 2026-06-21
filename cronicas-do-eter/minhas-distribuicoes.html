@@ -27,12 +27,24 @@ import { watchAuth, listMyDistributions, hasApprovedAccess } from './auth-servic
 const box=document.getElementById('distributionsList');
 function fmtDate(v){ try { return v?.toDate ? v.toDate().toLocaleString('pt-BR') : '-'; } catch(e){ return '-'; } }
 watchAuth(async ({profile})=>{
- if(!hasApprovedAccess(profile) || profile.premium!==true){ box.innerHTML='<div class="info-card"><h4>Acesso restrito</h4><p>Entre com uma conta premium para visualizar suas distribuições.</p></div>'; return; }
+ if(!hasApprovedAccess(profile) || !(profile.premium===true || profile.role==='admin' || profile.role==='master')){ box.innerHTML='<div class="info-card"><h4>Acesso restrito</h4><p>Entre com uma conta premium para visualizar suas distribuições.</p></div>'; return; }
  try{
-  const rows=await listMyDistributions();
+  const firebaseRows=await listMyDistributions().catch(()=>[]);
+  let localRows=[];
+  try { localRows=JSON.parse(localStorage.getItem('cronicasLocalDistributions')||'[]'); } catch(e) { localRows=[]; }
+  const seen=new Set();
+  const rows=[...firebaseRows, ...localRows].filter(d=>{
+    const key=d.id || (d.title+'|'+d.createdAtLocal+'|'+(d.lines||[]).join('|'));
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
   if(!rows.length){ box.innerHTML='<div class="info-card"><h4>Nenhuma distribuição salva</h4><p>Use a Calculadora XP/PT e clique em Validar e Exportar.</p></div>'; return; }
-  box.innerHTML=rows.map(d=>`<div class="lore-block"><h3>${d.title||'Distribuição XP/PT'}</h3><p><strong>Data:</strong> ${fmtDate(d.createdAt)}</p><p><strong>XP gasto:</strong> ${d.xpSpent||0} | <strong>PT gasto:</strong> ${d.ptSpent||0}</p><details><summary>Ver distribuição</summary><pre style="white-space:pre-wrap;line-height:1.5">${(d.lines||[]).join('
-')}</pre></details></div>`).join('');
+  box.innerHTML=rows.map(d=>{
+    const data = d.createdAt ? fmtDate(d.createdAt) : (d.createdAtLocal ? new Date(d.createdAtLocal).toLocaleString('pt-BR') : '-');
+    const badge = d.savedInFirebase===false ? '<p><em>Cópia local: não foi possível salvar no Firebase.</em></p>' : '';
+    return `<div class="lore-block"><h3>${d.title||'Distribuição XP/PT'}</h3><p><strong>Data:</strong> ${data}</p><p><strong>XP gasto:</strong> ${d.xpSpent||0} | <strong>PT gasto:</strong> ${d.ptSpent||0}</p>${badge}<details><summary>Ver distribuição</summary><pre style="white-space:pre-wrap;line-height:1.5">${(d.lines||[]).join('
+')}</pre></details></div>`;
+  }).join('');
  }catch(err){ box.innerHTML=`<div class="info-card"><h4>Erro</h4><p>${err.message}</p></div>`; }
 });
 </script></body></html>
