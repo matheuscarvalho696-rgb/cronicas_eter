@@ -603,6 +603,16 @@ function cleanRoll20Image(value) {
   return cleanText(value).slice(0, 2000);
 }
 
+function normalizeRoll20Category(value) {
+  const allowed = ["Jogadores", "MOB", "NPC", "Místicos"];
+  const cleaned = cleanText(value, "NPC");
+  return allowed.includes(cleaned) ? cleaned : "NPC";
+}
+
+function sortRoll20ByName(a, b) {
+  return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR", { sensitivity: "base" });
+}
+
 function normalizeRoll20Items(items, kind) {
   if (!Array.isArray(items)) return [];
   return items.map((item, index) => ({
@@ -611,10 +621,11 @@ function normalizeRoll20Items(items, kind) {
     name: cleanText(item.name || item.nome || item.title || item.titulo, kind === "character" ? "Personagem sem nome" : "Folheto sem título"),
     bio: cleanText(item.bioText || item.bio || item.bioHtml || item.biografia || item.notesText || item.notesHtml || item.gmnotes || item.content || item.conteudo || item.notes),
     imageUrl: cleanRoll20Image(item.imageUrl || item.avatar || item.imgsrc || item.image || item.imagem),
+    category: normalizeRoll20Category(item.category || item.categoria),
     tags: Array.isArray(item.tags) ? item.tags.map(cleanText).filter(Boolean) : [],
     visible: item.visible !== false,
     raw: item.raw || {}
-  })).filter(item => item.name || item.bio || item.imageUrl);
+  })).filter(item => item.name || item.bio || item.imageUrl).sort(sortRoll20ByName);
 }
 
 export async function saveRoll20Table(table) {
@@ -688,6 +699,7 @@ export async function importRoll20Selection({ tableId, campaignId, characters = 
       name: item.name,
       bio: item.bio,
       imageUrl: item.imageUrl,
+      category: item.category,
       tags: item.tags,
       visible: item.visible,
       importedAt: serverTimestamp(),
@@ -732,6 +744,7 @@ export async function updateRoll20Import(importId, patch = {}) {
     name: patch.name !== undefined ? cleanText(patch.name, data.name || "") : data.name,
     bio: patch.bio !== undefined ? cleanText(patch.bio) : data.bio,
     imageUrl: patch.imageUrl !== undefined ? cleanRoll20Image(patch.imageUrl) : data.imageUrl,
+    category: patch.category !== undefined ? normalizeRoll20Category(patch.category) : (data.category || "NPC"),
     visible: patch.visible !== undefined ? Boolean(patch.visible) : data.visible,
     updatedAt: serverTimestamp()
   };
