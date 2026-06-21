@@ -404,6 +404,22 @@ document.getElementById('buildCharacter').addEventListener('click',renderSheet);
   const CLASS_DICE_FALLBACK_V26 = {
     "Arqueiro":{vida:"d8",mana:"d6",energia:"d10"},"Bárbaro":{vida:"d12",mana:"d4",energia:"d12"},"Bardo":{vida:"d8",mana:"d8",energia:"d8"},"Bruxo":{vida:"d8",mana:"d10",energia:"d6"},"Clérigo":{vida:"d10",mana:"d10",energia:"d6"},"Feiticeiro":{vida:"d6",mana:"d12",energia:"d6"},"Guerreiro":{vida:"d10",mana:"d4",energia:"d12"},"Ladino":{vida:"d8",mana:"d6",energia:"d10"},"Mago":{vida:"d6",mana:"d12",energia:"d4"},"Monge":{vida:"d8",mana:"d8",energia:"d10"},"Paladino":{vida:"d10",mana:"d8",energia:"d10"}
   };
+  // SPRINT 4 v27 — vitalidades oficiais da classe principal.
+  // Subclasse/especialização não alteram vitalidades.
+  const CLASS_LEVEL_BONUS_V27 = {
+    "Arqueiro":{vida:4,mana:6,energia:15},"Bárbaro":{vida:5,mana:4,energia:16},"Bardo":{vida:4,mana:14,energia:7},
+    "Bruxo":{vida:4,mana:15,energia:6},"Clérigo":{vida:5,mana:8,energia:7},"Feiticeiro":{vida:4,mana:13,energia:8},
+    "Guerreiro":{vida:5,mana:2,energia:13},"Ladino":{vida:4,mana:6,energia:15},"Mago":{vida:4,mana:17,energia:4},
+    "Monge":{vida:5,mana:7,energia:8},"Paladino":{vida:7,mana:7,energia:12}
+  };
+  function rankVitalityBonusV27(rank){
+    const cumulative={D:0,C:5,B:15,A:35,S:65,SSS:125};
+    return cumulative[rank] ?? 0;
+  }
+  function attributeDiceByLevelV27(level){
+    const n=Math.max(0, Number(level)||0);
+    return Math.min(n,10) + Math.min(Math.max(n-10,0),10)*2 + Math.min(Math.max(n-20,0),10)*3 + Math.max(n-30,0)*4;
+  }
   function $v26(id){ return document.getElementById(id); }
   function numberV26(id){ return Number($v26(id)?.value)||0; }
   function avgDieV26(dieText){ const m=String(dieText||'').match(/d(\d+)/i); if(!m) return 0; return Math.ceil((1+Number(m[1]))/2); }
@@ -495,14 +511,21 @@ document.getElementById('buildCharacter').addEventListener('click',renderSheet);
     const vigor=Number(attrs.Vigor||0), forca=Number(attrs.Força||attrs.Forca||0), inteligencia=Number(attrs.Inteligência||attrs.Inteligencia||0), destreza=Number(attrs.Destreza||0);
     const vidaDieText=dieForClassV26(cls,'vida'), manaDieText=dieForClassV26(cls,'mana'), energiaDieText=dieForClassV26(cls,'energia');
     const vidaDie=avgDieV26(vidaDieText), manaDie=avgDieV26(manaDieText), energiaDie=avgDieV26(energiaDieText);
-    const base={vida:(rb.vit?.vida||0)+(cd.vit?.vida||0), mana:(rb.vit?.mana||0)+(cd.vit?.mana||0), energia:(rb.vit?.energia||0)+(cd.vit?.energia||0)};
     const rankData=rankDataV26();
-    const vidaPorNivel = nivel * vidaDie;
-    const manaPorNivel = nivel * manaDie;
-    const energiaPorNivel = nivel * energiaDie;
-    const vidaPorAtributo = vigor * nivel * vidaDie;
-    const manaPorAtributo = inteligencia * nivel * manaDie;
-    const energiaPorAtributo = forca * nivel * energiaDie;
+    const rankVital=rankVitalityBonusV27(rankData.rank);
+    const levelBonus=CLASS_LEVEL_BONUS_V27[cls] || {vida:0,mana:0,energia:0};
+    const base={
+      vida:(rb.vit?.vida||0)+(cd.vit?.vida||0)+rankVital,
+      mana:(rb.vit?.mana||0)+(cd.vit?.mana||0)+rankVital,
+      energia:(rb.vit?.energia||0)+(cd.vit?.energia||0)+rankVital
+    };
+    const dadosPorAtributo = attributeDiceByLevelV27(nivel);
+    const vidaPorNivel = nivel * levelBonus.vida;
+    const manaPorNivel = nivel * levelBonus.mana;
+    const energiaPorNivel = nivel * levelBonus.energia;
+    const vidaPorAtributo = vigor * dadosPorAtributo * vidaDie;
+    const manaPorAtributo = inteligencia * dadosPorAtributo * manaDie;
+    const energiaPorAtributo = forca * dadosPorAtributo * energiaDie;
     const w=selectedWeaponV26(), a=selectedArmorV26();
     const caf = a ? a.caf : 0, car = a ? a.car : 0, resistencia = a ? a.resistencia : 0;
     const hit = w ? w.hit : 0, dmg = w ? w.damageBonus : 0;
@@ -514,7 +537,8 @@ document.getElementById('buildCharacter').addEventListener('click',renderSheet);
       rank:rankData.rank, nivel, rankData, pontosAtuais:{atributos:attrs,focos,especiais,regeneracao:numberV26('distRegeneracao')}, pontosDistribuicaoDireta:rankData,
       vitalidadesIniciais:base, dadosClasse:{vida:vidaDieText,mana:manaDieText,energia:energiaDieText,mediaVida:vidaDie,mediaMana:manaDie,mediaEnergia:energiaDie},
       vitalidadesSimuladas:{vida:base.vida+vidaPorNivel+vidaPorAtributo, mana:base.mana+manaPorNivel+manaPorAtributo, energia:base.energia+energiaPorNivel+energiaPorAtributo, regeneracao:numberV26('distRegeneracao')},
-      breakdown:{vida:`${base.vida} inicial + ${nivel} nível(s) × média ${vidaDie} + ${vigor} Vigor × ${nivel} nível(s) × média ${vidaDie}`, mana:`${base.mana} inicial + ${nivel} nível(s) × média ${manaDie} + ${inteligencia} Inteligência × ${nivel} nível(s) × média ${manaDie}`, energia:`${base.energia} inicial + ${nivel} nível(s) × média ${energiaDie} + ${forca} Força × ${nivel} nível(s) × média ${energiaDie}`},
+      bonusGraduacaoVitalidade:rankVital, bonusClassePorNivel:levelBonus, dadosPorAtributo,
+      breakdown:{vida:`${base.vida} inicial (raça + classe principal + graduação) + ${nivel} nível(s) × ${levelBonus.vida} vida da classe principal + ${vigor} Vigor × ${dadosPorAtributo} dado(s) acumulado(s) × média ${vidaDie}`, mana:`${base.mana} inicial (raça + classe principal + graduação) + ${nivel} nível(s) × ${levelBonus.mana} mana da classe principal + ${inteligencia} Inteligência × ${dadosPorAtributo} dado(s) acumulado(s) × média ${manaDie}`, energia:`${base.energia} inicial (raça + classe principal + graduação) + ${nivel} nível(s) × ${levelBonus.energia} energia da classe principal + ${forca} Força × ${dadosPorAtributo} dado(s) acumulado(s) × média ${energiaDie}`},
       equipamentos:{arma:w, armadura:a, caf, car, resistencia, bonusAcerto:hit, bonusDano:dmg}, combate:{caFortitude, caReflexos, resistencia, acertoSimulado:acerto, danoBonus:dmg}, talentos
     };
   }
@@ -523,7 +547,8 @@ document.getElementById('buildCharacter').addEventListener('click',renderSheet);
     const sim=computeSimulationV26(), r=sim.rankData;
     const html=`<div class="sim-box"><h4>Simulação Premium Avançada</h4><ul>
       <li><strong>Ranque ${sim.rank}</strong>: Atributos ${r.atributos}, Foco ${r.foco}, Perícias ${r.pericias}, Atributos Especiais ${r.especial}, Status ${r.status}, PT ${r.pt}${r.xpBonus?`, XP bônus ${r.xpBonus}`:''}, Dano elemental ${r.danoElemental}.</li>
-      <li>Nível simulado: ${sim.nivel}. Dados da classe principal por nível: Vida ${sim.dadosClasse.vida}, Mana ${sim.dadosClasse.mana}, Energia ${sim.dadosClasse.energia}.</li>
+      <li>Nível simulado: ${sim.nivel}. Bônus fixo por nível da classe principal: +${sim.bonusClassePorNivel.vida} Vida, +${sim.bonusClassePorNivel.mana} Mana, +${sim.bonusClassePorNivel.energia} Energia.</li>
+      <li>Dados por atributo acumulados pelo nível: ${sim.dadosPorAtributo} dado(s) por ponto. Dados da classe: Vida ${sim.dadosClasse.vida}, Mana ${sim.dadosClasse.mana}, Energia ${sim.dadosClasse.energia}. Bônus de graduação aplicado em cada vitalidade: +${sim.bonusGraduacaoVitalidade}.</li>
       <li>Vida: <strong>${sim.vitalidadesSimuladas.vida}</strong> <span class="sheet-muted">(${sim.breakdown.vida})</span></li>
       <li>Mana: <strong>${sim.vitalidadesSimuladas.mana}</strong> <span class="sheet-muted">(${sim.breakdown.mana})</span></li>
       <li>Energia: <strong>${sim.vitalidadesSimuladas.energia}</strong> <span class="sheet-muted">(${sim.breakdown.energia})</span></li>
