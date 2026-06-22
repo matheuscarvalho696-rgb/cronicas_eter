@@ -24,6 +24,17 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
     }
 
+    function isMaster() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    function isMasterOrAdmin() {
+      return isAdmin() || isMaster();
+    }
+
     match /settings/{docId} {
       allow read: if true;
       allow write: if isAdmin() || isBootstrapAdminEmail();
@@ -119,18 +130,18 @@ service cloud.firestore {
       // Todos os usuários logados podem ver as mesas.
       allow read: if signedIn();
 
-      // Apenas Admin pode criar, editar ou remover mesas.
-      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if isAdmin();
+      // Admin e Mestre podem criar mesas. Mestre gerencia apenas as próprias mesas; Admin gerencia tudo.
+      allow create: if isMasterOrAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin() || (isMaster() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /roll20Imports/{docId} {
       // Todos os usuários logados podem ver personagens e folhetos importados.
       allow read: if signedIn();
 
-      // Apenas Admin pode importar, editar, ocultar ou remover conteúdos.
-      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if isAdmin();
+      // Admin e Mestre podem importar. Mestre gerencia apenas os próprios conteúdos; Admin gerencia tudo.
+      allow create: if isMasterOrAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin() || (isMaster() && resource.data.ownerUid == request.auth.uid);
 
       // Jogador logado pode reivindicar personagem da categoria Jogadores.
       allow update: if signedIn()
@@ -148,9 +159,9 @@ service cloud.firestore {
     match /systemDownloads/{docId} {
       // Usuários logados podem ver downloads premium; a página ainda limita visualmente a premium/aprovados.
       allow read: if signedIn();
-      // Apenas Admin publica, edita ou remove arquivos disponíveis para download.
-      allow create: if isAdmin() && request.resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if isAdmin();
+      // Admin e Mestre podem publicar downloads. Mestre gerencia apenas os próprios downloads; Admin gerencia tudo.
+      allow create: if isMasterOrAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isAdmin() || (isMaster() && resource.data.ownerUid == request.auth.uid);
     }
 
     match /{document=**} {

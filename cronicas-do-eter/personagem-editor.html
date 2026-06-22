@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+<title>Editar Personagem — Crônicas do Éter</title>
+<style>
+.editor-wrap{max-width:1180px;margin:0 auto;padding:1rem 1.2rem 4rem}.editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start}.editor-panel{background:var(--surface);border:1px solid var(--border);padding:1.1rem}.editor-panel h3{font-family:'Cinzel',serif;color:var(--ether-pale);letter-spacing:.06em;text-transform:uppercase;margin-top:0}.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.field-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.field-grid label,.point-row label,.editor-panel label{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--silver-dim)}.ether-input{width:100%;box-sizing:border-box}.points-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.point-row{display:grid;grid-template-columns:1fr 110px;gap:.6rem;align-items:end}.roll20-preview{display:grid;grid-template-columns:150px 1fr;gap:1rem;margin-bottom:1rem}.roll20-preview img{width:150px;max-height:220px;object-fit:cover;border:1px solid var(--border)}.roll20-bio{white-space:pre-wrap;line-height:1.45}.toolbar{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem}.save-msg{margin-top:.75rem}.muted{color:var(--silver-dim)}@media(max-width:850px){.editor-grid,.field-grid,.field-grid.three,.points-grid,.roll20-preview{grid-template-columns:1fr}.roll20-preview img{width:100%;max-height:none}}
+</style>
+</head>
+<body>
+<nav class="topbar"><button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button><a class="nav-brand" href="index.html">Crônicas do Éter</a></nav>
+<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar">
+  <div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div>
+  <a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div><a class="requires-auth" href="meus-personagens.html">Meus Personagens</a><a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a><a class="requires-auth" href="sistema-download.html">Download do Sistema</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
+</aside>
+<div id="stars"></div>
+<header class="page-header"><p class="breadcrumb"><a href="index.html">Início</a> / <a href="meus-personagens.html">Meus Personagens</a> / Editar</p><p class="page-eyebrow">Área Premium</p><h1 class="page-title" id="pageTitle">Editar Personagem</h1><p class="page-intro">Edite os dados principais e distribua pontos de atributos, focos, status e atributos especiais.</p></header>
+<main class="editor-wrap"><div id="editorRoot" class="editor-panel"><p>Carregando personagem...</p></div></main>
+<footer><span>Crônicas do Éter</span> — Editor de Personagem</footer>
+<script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script>
+<script type="module">
+import { watchAuth, listMyCharacters, updateCharacter, hasApprovedAccess } from './auth-service.js';
+const $=id=>document.getElementById(id);
+const root=$('editorRoot');
+const params=new URLSearchParams(location.search);
+const characterId=params.get('id')||'';
+const ATTRS=['Vigor','Força','Destreza','Inteligência','Sabedoria','Carisma'];
+const ESPECIAIS=['CAF','CAR','Resistência','Acerto','Dano','Deslocamento','Redução Mágica','Redução de Conjuração','Regeneração'];
+const STATUS=['Vida','Mana','Energia','Sanidade','Fama','Reputação','Riqueza'];
+const RANKS={D:{atributos:10,foco:4,pericias:14,especial:4,status:1},C:{atributos:20,foco:15,pericias:20,especial:8,status:4},B:{atributos:40,foco:30,pericias:40,especial:16,status:8},A:{atributos:80,foco:60,pericias:60,especial:32,status:12},S:{atributos:130,foco:90,pericias:90,especial:60,status:12},SSS:{atributos:184,foco:140,pericias:120,especial:60,status:12}};
+function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
+function sumObj(obj){return Object.values(obj||{}).reduce((a,b)=>a+n(b),0);}
+function getPath(obj,path,fallback){return path.split('.').reduce((acc,k)=>acc&&acc[k]!==undefined?acc[k]:undefined,obj)??fallback;}
+function parseLines(text){const out={}; String(text||'').split(/\n+/).forEach(line=>{const m=line.match(/^\s*([^:=-]+)\s*[:=-]\s*(-?\d+)\s*$/); if(m) out[m[1].trim()]=Number(m[2]);}); return out;}
+function linesFromObj(obj){return Object.entries(obj||{}).map(([k,v])=>`${k}: ${v}`).join('\n');}
+function numberInputs(keys,obj,prefix){return keys.map(k=>`<div class="point-row"><label>${esc(k)}</label><input class="ether-input ${prefix}-field" data-key="${esc(k)}" type="number" value="${esc(obj?.[k]??0)}"></div>`).join('');}
+function rankOptions(current){return Object.keys(RANKS).map(r=>`<option value="${r}" ${r===current?'selected':''}>${r} — Atr. ${RANKS[r].atributos} / Focos ${RANKS[r].foco} / Esp. ${RANKS[r].especial} / Status ${RANKS[r].status}</option>`).join('');}
+function render(c){
+  const pontos=getPath(c,'simulacao.pontosAtuais',c.pontosAtuais||{});
+  const attrs=pontos.atributos||{}; const focos=pontos.focos||{}; const especiais=pontos.especiais||{}; const status=pontos.status||{};
+  const rank=c.rankInicial||getPath(c,'simulacao.rank','D');
+  $('pageTitle').textContent='Editar '+(c.nome||'Personagem');
+  root.innerHTML=`
+  <div class="editor-grid">
+    <section class="editor-panel">
+      <h3>Informações principais</h3>
+      ${(c.roll20Bio||c.roll20ImageUrl)?`<div class="roll20-preview">${c.roll20ImageUrl?`<img src="${esc(c.roll20ImageUrl)}" alt="${esc(c.nome)}">`:''}<div><h4>Descrição importada do Roll20</h4><div class="roll20-bio">${esc(c.roll20Bio||'Sem descrição importada.')}</div></div></div>`:''}
+      <div class="field-grid">
+        <div><label>Nome</label><input id="nome" class="ether-input" value="${esc(c.nome||'')}"></div>
+        <div><label>Raça</label><input id="raca" class="ether-input" value="${esc(c.raca||'')}"></div>
+        <div><label>Classe</label><input id="classe" class="ether-input" value="${esc(c.classe||'')}"></div>
+        <div><label>Subclasse</label><input id="subclasse" class="ether-input" value="${esc(c.subclasse||'')}"></div>
+        <div><label>Especialização</label><input id="especializacao" class="ether-input" value="${esc(c.especializacao||'')}"></div>
+        <div><label>Elemento natural</label><input id="elementoNatural" class="ether-input" value="${esc(c.elementoNatural||'')}"></div>
+        <div><label>Ranque</label><select id="rankInicial" class="ether-input">${rankOptions(rank)}</select></div>
+      </div>
+      <label style="display:block;margin-top:.9rem">Descrição/anotações próprias do site</label>
+      <textarea id="dica" class="ether-input" rows="6">${esc(c.resumo?.dica||'')}</textarea>
+    </section>
+    <section class="editor-panel">
+      <h3>Resumo de pontos</h3>
+      <p class="muted">Os limites abaixo mudam conforme o ranque escolhido. O site avisa se você passar do limite, mas ainda permite salvar caso você queira ajustar manualmente.</p>
+      <div id="pointsSummary" class="note"></div>
+      <h3>Vitalidades manuais</h3>
+      <div class="field-grid three">
+        ${['vidaAtual','vidaMax','manaAtual','manaMax','energiaAtual','energiaMax'].map(k=>`<div><label>${k}</label><input class="ether-input vital-field" data-key="${k}" type="number" value="${esc(c.vitalidadesManuais?.[k]??'')}"></div>`).join('')}
+      </div>
+    </section>
+  </div>
+  <div class="editor-grid" style="margin-top:1rem">
+    <section class="editor-panel"><h3>Atributos</h3><div class="points-grid">${numberInputs(ATTRS,attrs,'attr')}</div></section>
+    <section class="editor-panel"><h3>Atributos especiais</h3><div class="points-grid">${numberInputs(ESPECIAIS,especiais,'special')}</div></section>
+    <section class="editor-panel"><h3>Status</h3><div class="points-grid">${numberInputs(STATUS,status,'status')}</div></section>
+    <section class="editor-panel"><h3>Focos</h3><p class="muted">Escreva um por linha no formato <strong>Nome: pontos</strong>.</p><textarea id="focosText" class="ether-input" rows="13">${esc(linesFromObj(focos))}</textarea></section>
+  </div>
+  <div class="editor-panel" style="margin-top:1rem"><h3>Equipamentos e anotações rápidas</h3><label>Anotações</label><textarea id="anotacoes" class="ether-input" rows="5">${esc(c.anotacoes||'')}</textarea><div class="toolbar"><button id="saveBtn" class="btn-primary" type="button">Salvar personagem</button><a class="btn-secondary" href="meus-personagens.html">Voltar</a></div><p id="saveMsg" class="save-msg"></p></div>`;
+  function collect(prefix){const obj={}; document.querySelectorAll('.'+prefix+'-field').forEach(i=>obj[i.dataset.key]=n(i.value)); return obj;}
+  function updateSummary(){const rank=$('rankInicial').value; const lim=RANKS[rank]||RANKS.D; const focosObj=parseLines($('focosText')?.value||''); const a=collect('attr'), sp=collect('special'), st=collect('status'); $('pointsSummary').innerHTML=`Atributos: <strong>${sumObj(a)}/${lim.atributos}</strong> • Focos: <strong>${sumObj(focosObj)}/${lim.foco}</strong> • Atributos especiais: <strong>${sumObj(sp)}/${lim.especial}</strong> • Status: <strong>${sumObj(st)}/${lim.status}</strong>`;}
+  root.querySelectorAll('input,textarea,select').forEach(el=>el.addEventListener('input',updateSummary)); updateSummary();
+  $('saveBtn').onclick=async()=>{const msg=$('saveMsg'); msg.textContent='Salvando...'; try{const rank=$('rankInicial').value; const pontosAtuais={atributos:collect('attr'),focos:parseLines($('focosText').value),especiais:collect('special'),status:collect('status')}; const vitalidadesManuais={}; document.querySelectorAll('.vital-field').forEach(i=>vitalidadesManuais[i.dataset.key]=i.value===''?'':Number(i.value)); await updateCharacter(characterId,{nome:$('nome').value,raca:$('raca').value,classe:$('classe').value,subclasse:$('subclasse').value,especializacao:$('especializacao').value,elementoNatural:$('elementoNatural').value,rankInicial:rank,pontosAtuais,simulacao:{...(c.simulacao||{}),rank,pontosAtuais,pontosDistribuicaoDireta:RANKS[rank]},pontosDistribuicaoDireta:RANKS[rank],vitalidadesManuais,resumo:{...(c.resumo||{}),dica:$('dica').value},anotacoes:$('anotacoes').value}); msg.textContent='Personagem salvo com sucesso.'; msg.className='save-msg success-text';}catch(err){msg.textContent=err.message||'Erro ao salvar.'; msg.className='save-msg error-text';}};
+}
+watchAuth(async({profile})=>{if(!hasApprovedAccess(profile)||!(profile.premium===true||profile.role==='admin'||profile.role==='master'||profile.role==='player')){root.innerHTML='<h3>Acesso restrito</h3><p>Entre com uma conta premium para editar personagens.</p>';return;} try{const chars=await listMyCharacters(); const c=chars.find(x=>String(x.id)===String(characterId)); if(!c){root.innerHTML='<h3>Personagem não encontrado</h3><p>Volte para Meus Personagens e tente abrir novamente.</p>';return;} render(c);}catch(err){root.innerHTML='<h3>Erro</h3><p>'+esc(err.message)+'</p>';}});
+</script>
+</body>
+</html>

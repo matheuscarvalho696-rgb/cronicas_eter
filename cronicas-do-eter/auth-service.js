@@ -735,7 +735,9 @@ export async function deleteFamiliar(familiarId) {
 async function requireAdminUser() {
   const user = requireCurrentUser();
   const profile = await getUserProfile(user.uid);
-  if (profile?.role !== "admin") throw new Error("Somente o Admin pode alterar esta área.");
+  if (!profile || profile.status !== "approved" || !["admin", "master"].includes(profile.role)) {
+    throw new Error("Somente Admin ou Mestre pode alterar esta área.");
+  }
   return user;
 }
 
@@ -821,7 +823,9 @@ export async function deleteRoll20Table(tableId) {
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Mesa não encontrada.");
   const data = snap.data();
-  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar suas próprias mesas.");
+  // Admin pode remover qualquer mesa; Mestre só remove as próprias mesas.
+  const profile = await getUserProfile(user.uid);
+  if (profile?.role !== "admin" && data.ownerUid !== user.uid) throw new Error("Você só pode deletar suas próprias mesas.");
   await deleteDoc(ref);
   await createLog("roll20.table_deleted", { tableId, name: data.name || "" });
 }
@@ -1009,7 +1013,9 @@ export async function updateRoll20Import(importId, patch = {}) {
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Registro não encontrado.");
   const data = snap.data();
-  if (data.ownerUid !== user.uid) throw new Error("Você só pode editar seus próprios registros.");
+  // Admin pode editar qualquer importação; Mestre só edita as próprias importações.
+  const profile = await getUserProfile(user.uid);
+  if (profile?.role !== "admin" && data.ownerUid !== user.uid) throw new Error("Você só pode editar seus próprios registros.");
   const safePatch = {
     name: patch.name !== undefined ? cleanText(patch.name, data.name || "") : data.name,
     bio: patch.bio !== undefined ? cleanText(patch.bio) : data.bio,
@@ -1030,7 +1036,9 @@ export async function deleteRoll20Import(importId) {
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Registro não encontrado.");
   const data = snap.data();
-  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios registros.");
+  // Admin pode deletar qualquer importação; Mestre só deleta as próprias importações.
+  const profile = await getUserProfile(user.uid);
+  if (profile?.role !== "admin" && data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios registros.");
   await deleteDoc(ref);
   await createLog("roll20.import_deleted", { importId, name: data.name || "" });
 }
@@ -1078,7 +1086,9 @@ export async function updateSystemDownload(downloadId, patch = {}) {
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Download não encontrado.");
   const data = snap.data();
-  if (data.ownerUid !== user.uid) throw new Error("Você só pode editar seus próprios downloads.");
+  // Admin pode editar qualquer download; Mestre só edita os próprios downloads.
+  const profile = await getUserProfile(user.uid);
+  if (profile?.role !== "admin" && data.ownerUid !== user.uid) throw new Error("Você só pode editar seus próprios downloads.");
   const safePatch = {
     title: patch.title !== undefined ? cleanText(patch.title, data.title || "") : data.title,
     version: patch.version !== undefined ? cleanText(patch.version) : data.version,
@@ -1099,7 +1109,9 @@ export async function deleteSystemDownload(downloadId) {
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Download não encontrado.");
   const data = snap.data();
-  if (data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios downloads.");
+  // Admin pode deletar qualquer download; Mestre só deleta os próprios downloads.
+  const profile = await getUserProfile(user.uid);
+  if (profile?.role !== "admin" && data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios downloads.");
   await deleteDoc(ref);
   await createLog("system_download.deleted", { downloadId, title: data.title || "" });
 }
