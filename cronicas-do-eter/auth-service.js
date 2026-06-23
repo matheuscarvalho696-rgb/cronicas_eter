@@ -23,7 +23,11 @@ import {
   query,
   orderBy,
   where,
-  limit
+  limit,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
 } from "./firebase-app.js";
 
 // Conta bootstrap: sempre poderá recuperar acesso admin.
@@ -1049,6 +1053,41 @@ export async function deleteRoll20Import(importId) {
 // DOWNLOADS PREMIUM DO SISTEMA
 // ========================================================
 
+function safeFileName(name) {
+  return cleanText(name, "arquivo")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 120) || "arquivo";
+}
+
+export async function uploadSystemDownloadFile(file) {
+  const { storage } = getFirebase();
+  const user = await requireAdminUser();
+  if (!file) throw new Error("Selecione um arquivo.");
+  const maxSize = 200 * 1024 * 1024;
+  if (file.size > maxSize) throw new Error("Arquivo muito grande. Limite atual: 200 MB.");
+  const fileName = safeFileName(file.name || "sistema");
+  const path = `system-downloads/${user.uid}/${Date.now()}-${fileName}`;
+  const ref = storageRef(storage, path);
+  const snap = await uploadBytes(ref, file, {
+    contentType: file.type || "application/octet-stream",
+    customMetadata: {
+      ownerUid: user.uid,
+      originalName: file.name || fileName
+    }
+  });
+  const url = await getDownloadURL(snap.ref);
+  return {
+    fileUrl: url,
+    filePath: path,
+    fileName: file.name || fileName,
+    fileSize: file.size || 0,
+    fileType: file.type || "application/octet-stream"
+  };
+}
+
 export async function saveSystemDownload(download) {
   const { db } = getFirebase();
   const user = await requireAdminUser();
@@ -1058,14 +1097,18 @@ export async function saveSystemDownload(download) {
     title: cleanText(download.title, "Sistema Crônicas do Éter"),
     version: cleanText(download.version),
     fileUrl: cleanUrl(download.fileUrl),
+    filePath: cleanText(download.filePath),
+    fileName: cleanText(download.fileName),
+    fileSize: Number(download.fileSize || 0),
+    fileType: cleanText(download.fileType),
     description: cleanText(download.description),
     visible: download.visible !== false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
-  if (!payload.fileUrl) throw new Error("Informe o link de download do arquivo.");
+  if (!payload.fileUrl) throw new Error("Selecione e envie um arquivo.");
   const ref = await addDoc(collection(db, "systemDownloads"), payload);
-  await createLog("system_download.saved", { downloadId: ref.id, title: payload.title });
+  await createLog("system_download.saved", { downloadId: ref.id, title: payload.title, fileName: payload.fileName });
   return ref.id;
 }
 
@@ -1093,6 +1136,10 @@ export async function updateSystemDownload(downloadId, patch = {}) {
     title: patch.title !== undefined ? cleanText(patch.title, data.title || "") : data.title,
     version: patch.version !== undefined ? cleanText(patch.version) : data.version,
     fileUrl: patch.fileUrl !== undefined ? cleanUrl(patch.fileUrl) : data.fileUrl,
+    filePath: patch.filePath !== undefined ? cleanText(patch.filePath) : data.filePath,
+    fileName: patch.fileName !== undefined ? cleanText(patch.fileName) : data.fileName,
+    fileSize: patch.fileSize !== undefined ? Number(patch.fileSize || 0) : data.fileSize,
+    fileType: patch.fileType !== undefined ? cleanText(patch.fileType) : data.fileType,
     description: patch.description !== undefined ? cleanText(patch.description) : data.description,
     visible: patch.visible !== undefined ? Boolean(patch.visible) : data.visible,
     updatedAt: serverTimestamp()
@@ -1113,6 +1160,14 @@ export async function deleteSystemDownload(downloadId) {
   const profile = await getUserProfile(user.uid);
   if (profile?.role !== "admin" && data.ownerUid !== user.uid) throw new Error("Você só pode deletar seus próprios downloads.");
   await deleteDoc(ref);
+  if (data.filePath) {
+    try {
+      const { storage } = getFirebase();
+      await deleteObject(storageRef(storage, data.filePath));
+    } catch (err) {
+      console.warn("Arquivo do Storage não foi removido:", err);
+    }
+  }
   await createLog("system_download.deleted", { downloadId, title: data.title || "" });
 }
 

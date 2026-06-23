@@ -60,3 +60,15 @@ No painel `admin.html`, você pode:
 - gerar um código aleatório e copiar para enviar manualmente aos jogadores.
 
 Envio automático de e-mail ainda não está ativo, porque isso exige backend/Cloud Functions.
+
+## Upload de arquivos do sistema no Premium
+
+A página `sistema-download.html` agora usa Firebase Storage.
+
+No Firebase, além das regras do Firestore, abra também:
+
+**Storage > Rules**
+
+E cole a parte chamada **FIREBASE STORAGE — DOWNLOADS DO SISTEMA** que está no final do arquivo `firebase-rules.txt`.
+
+Sem essa regra, Admin/Mestre verá erro de permissão ao tentar enviar PDF/ZIP diretamente pelo site.

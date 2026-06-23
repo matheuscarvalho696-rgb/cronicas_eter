@@ -30,10 +30,18 @@ import {
   deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 let app = null;
 let auth = null;
 let db = null;
+let storage = null;
 
 export function firebaseReady() {
   return isFirebaseConfigured();
@@ -47,8 +55,9 @@ export function getFirebase() {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
+    storage = getStorage(app);
   }
-  return { app, auth, db };
+  return { app, auth, db, storage };
 }
 
 export {
@@ -72,5 +81,9 @@ export {
   orderBy,
   where,
   limit,
-  deleteField
+  deleteField,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
 };
