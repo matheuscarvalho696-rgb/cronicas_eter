@@ -61,14 +61,20 @@ No painel `admin.html`, você pode:
 
 Envio automático de e-mail ainda não está ativo, porque isso exige backend/Cloud Functions.
 
-## Upload de arquivos do sistema no Premium
 
-A página `sistema-download.html` agora usa Firebase Storage.
+## Downloads do Sistema pelo GitHub
 
-No Firebase, além das regras do Firestore, abra também:
+Esta versão **não usa Firebase Storage**. Você não precisa mudar o plano do Firebase.
 
-**Storage > Rules**
+Para disponibilizar um arquivo premium:
 
-E cole a parte chamada **FIREBASE STORAGE — DOWNLOADS DO SISTEMA** que está no final do arquivo `firebase-rules.txt`.
+1. Coloque o arquivo dentro da pasta `downloads` do repositório no GitHub.
+2. Publique o site normalmente.
+3. No site, entre em `Download do Sistema`.
+4. Como Admin ou Mestre, cadastre o título, versão e o nome exato do arquivo.
 
-Sem essa regra, Admin/Mestre verá erro de permissão ao tentar enviar PDF/ZIP diretamente pelo site.
+Exemplo: se o arquivo estiver em `downloads/cronicas-do-eter-sistema.pdf`, no campo do site escreva:
+
+`cronicas-do-eter-sistema.pdf`
+
+Não precisa ativar Storage, não precisa mexer nas Rules do Storage e não precisa colocar cartão no Firebase.

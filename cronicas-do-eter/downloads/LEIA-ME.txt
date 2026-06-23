@@ -1,0 +1,8 @@
+Coloque aqui os arquivos premium para download.
+
+Exemplos:
+- cronicas-do-eter-sistema.pdf
+- bestiario.zip
+- ficha-editavel.pdf
+
+Depois de subir o arquivo para o GitHub, vá na página "Download do Sistema" e cadastre exatamente o nome do arquivo.

@@ -169,36 +169,3 @@ service cloud.firestore {
     }
   }
 }
-
-// ========================================================
-// FIREBASE STORAGE — DOWNLOADS DO SISTEMA
-// Cole esta parte na aba Rules do Storage, não na aba Rules do Firestore.
-// ========================================================
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    function signedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return signedIn()
-        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'approved';
-    }
-
-    function isMaster() {
-      return signedIn()
-        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'master'
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'approved';
-    }
-
-    match /system-downloads/{userId}/{fileName} {
-      allow read: if signedIn();
-      allow create: if (isAdmin() || isMaster()) && request.auth.uid == userId;
-      allow update, delete: if isAdmin() || (isMaster() && request.auth.uid == userId);
-    }
-  }
-}
