@@ -60,21 +60,3 @@ No painel `admin.html`, você pode:
 - gerar um código aleatório e copiar para enviar manualmente aos jogadores.
 
 Envio automático de e-mail ainda não está ativo, porque isso exige backend/Cloud Functions.
-
-
-## Downloads do Sistema pelo GitHub
-
-Esta versão **não usa Firebase Storage**. Você não precisa mudar o plano do Firebase.
-
-Para disponibilizar um arquivo premium:
-
-1. Coloque o arquivo dentro da pasta `downloads` do repositório no GitHub.
-2. Publique o site normalmente.
-3. No site, entre em `Download do Sistema`.
-4. Como Admin ou Mestre, cadastre o título, versão e o nome exato do arquivo.
-
-Exemplo: se o arquivo estiver em `downloads/cronicas-do-eter-sistema.pdf`, no campo do site escreva:
-
-`cronicas-do-eter-sistema.pdf`
-
-Não precisa ativar Storage, não precisa mexer nas Rules do Storage e não precisa colocar cartão no Firebase.
