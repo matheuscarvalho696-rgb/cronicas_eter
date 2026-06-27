@@ -107,7 +107,7 @@
 <p class="breadcrumb"><a href="index.html">Início</a> / Calculadora XP/PT</p>
 <p class="page-eyebrow">Ferramenta do Jogador</p>
 <h1 class="page-title">Calculadora de XP &amp; PT</h1>
-<p class="page-intro">Interface reorganizada com a aba XP Principal no mesmo padrão do Editor de Personagem. Ao carregar um personagem, os campos atuais são preenchidos com os dados salvos da ficha.</p>
+<p class="page-intro">Interface reorganizada com a aba XP Principal no mesmo padrão do Editor de Personagem. Ao validar o XP, os dados desejados são aplicados automaticamente ao personagem selecionado.</p>
 </header>
 <section style="padding-top:1rem;"><div class="container">
 <div class="note reveal"><strong>Modelo:</strong> se Vigor está em 1 e o jogador deseja Vigor 30, o sistema calcula o custo dos pontos 2 até 30. Pontos já existentes na ficha não são cobrados novamente.</div>
@@ -135,7 +135,7 @@
 <p class="mini">PT automático = XP disponível × 2. Use o campo “PT disponível” se quiser somar PT extra, bônus ou saldo anterior.</p>
 </div>
 <button class="reset-btn" id="resetBtn">↺ Limpar valores</button>
-<button class="export-btn" id="exportBtn">Validar e Exportar</button>
+<button class="export-btn" id="exportBtn">Validar, Atualizar Personagem e Exportar</button>
 </aside>
 <main class="reveal">
 <div class="tabs">
@@ -736,7 +736,7 @@ render();
 </script>
 <script type="module" src="auth-widget.js"></script>
 <script type="module" src="auth-guard.js"></script><script type="module">
-import { watchAuth, saveDistribution, hasApprovedAccess, listMyCharacters } from './auth-service.js';
+import { watchAuth, saveDistribution, hasApprovedAccess, listMyCharacters, updateCharacter } from './auth-service.js';
 let currentProfile = null;
 let loadedCharacters = [];
 let loadedCharacterIndex = null;
@@ -843,21 +843,22 @@ function getDesiredRowsByCategory(){
   const focos=['Mentalismo','Místico','Domínio','Encantamento','Fortaleza'];
   const especiais=['Somática','Controle','Recuperação','Raciocínio'];
   const status=['Defesa','Esquiva','Acerto Físico','Acerto Mágico'];
-  const out={atributos:{},focos:{},especiais:{},status:{},regeneracao:0};
+  const extras=['Perícias','Dados de Vida','Dados de Mana','Dados de Energia'];
+  const out={atributos:{},focos:{},especiais:{},status:{},extrasXP:{},regeneracao:0};
   document.querySelectorAll('.range-line,.xp-row').forEach(line=>{
-    const name=(line.querySelector('.range-name')?.childNodes?.[0]?.textContent || line.querySelector('.range-name')?.textContent || '').trim();
+    const name=(line.querySelector('.range-name')?.dataset?.field || line.querySelector('.range-name')?.childNodes?.[0]?.textContent || line.querySelector('.range-name')?.textContent || '').trim();
     const desired=line.querySelector('[data-kind="desired"]');
     const current=line.querySelector('[data-kind="current"]');
     if(!desired || !name) return;
     const desiredRaw=String(desired.value ?? '').trim();
     const currentValue=Number(current?.value)||0;
-    // Regra oficial do site: desejado vazio ou 0 mantém o valor atual do personagem carregado.
     const parsed=Number(desiredRaw);
-    const value=(!desiredRaw || parsed<=0) ? currentValue : parsed;
+    const value=(!desiredRaw || parsed<0) ? currentValue : parsed;
     if(attrs.includes(name)) out.atributos[name]=value;
     else if(focos.includes(name)) out.focos[name]=value;
     else if(especiais.includes(name)) out.especiais[name]=value;
     else if(status.includes(name)) out.status[name]=value;
+    else if(extras.includes(name)) out.extrasXP[name]=value;
     else if(name.toLowerCase().startsWith('regeneração') || name.toLowerCase().startsWith('regeneracao')) out.regeneracao=value;
   });
   return out;
@@ -865,10 +866,26 @@ function getDesiredRowsByCategory(){
 function buildCharacterUpdateFromDesired(character){
   const pontos=getDesiredRowsByCategory();
   const oldSim=character.simulacao || {};
+  const oldPontos=character.pontosAtuais || {};
+  const pontosAtuais={
+    ...oldPontos,
+    atributos:pontos.atributos,
+    focos:pontos.focos,
+    especiais:pontos.especiais,
+    status:pontos.status,
+    extras:pontos.extrasXP,
+    regeneracao:pontos.regeneracao
+  };
   return {
-    pontosAtuais:pontos,
-    simulacao:{...oldSim, pontosAtuais:pontos},
-    "calculator.lastAppliedAt": new Date().toISOString()
+    pontosAtuais,
+    atributos:pontos.atributos,
+    focos:pontos.focos,
+    atributosEspeciais:pontos.especiais,
+    statusCombate:pontos.status,
+    extrasXP:pontos.extrasXP,
+    regeneracao:pontos.regeneracao,
+    simulacao:{...oldSim, pontosAtuais, atributos:pontos.atributos, focos:pontos.focos, atributosEspeciais:pontos.especiais, statusCombate:pontos.status, extrasXP:pontos.extrasXP, regeneracao:pontos.regeneracao},
+    calculator:{ lastAppliedAt: new Date().toISOString() }
   };
 }
 
@@ -899,6 +916,11 @@ async function persistValidatedDistribution(lines){
     if (!hasPremiumToolAccess(currentProfile)) return;
     const savedId = await saveDistribution(payload);
     payload.id = savedId;
+    if (linkedCharacter && characterUpdate) {
+      await updateCharacter(linkedCharacter.id, characterUpdate);
+      loadedCharacters[loadedCharacterIndex] = { ...linkedCharacter, ...characterUpdate };
+      payload.characterAutoUpdated = true;
+    }
     payload.savedInFirebase = true;
   } catch (err) {
     console.warn('Não foi possível salvar a distribuição no Firebase. Salvando cópia local:', err);
