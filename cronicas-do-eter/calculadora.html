@@ -452,17 +452,17 @@ function costBetween(current, desired, rangeKey){
 }
 function rowHTML(row, idx){
   if(row.type === 'ptFixed'){
-    return `<div class="xp-row qty"><div><label>Quantidade</label><input data-idx="${idx}" data-kind="qty" type="number" min="0" step="1" value="0"></div><div class="range-name">${row.name}<div class="mini">${row.cost} PT cada</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
+    return `<div class="xp-row qty"><div><label>Quantidade</label><input data-idx="${idx}" data-kind="qty" type="number" min="0" step="1" value="0"></div><div class="range-name" data-field="${row.name}">${row.name}<div class="mini">${row.cost} PT cada</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
   }
   if(row.type === 'abilityRange'){
     const max = abilityProfiles[row.profile]?.length || 0;
-    return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="0" max="${max}" step="1" value="0"><input data-idx="${idx}" data-kind="desired" type="number" min="0" max="${max}" step="1" value="0"><div class="range-name">${row.name}<div class="mini">${row.note || 'Cálculo por Atual → Desejado'}</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
+    return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="0" max="${max}" step="1" value="0"><input data-idx="${idx}" data-kind="desired" type="number" min="0" max="${max}" step="1" value="0"><div class="range-name" data-field="${row.name}">${row.name}<div class="mini">${row.note || 'Cálculo por Atual → Desejado'}</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
   }
   if(row.type === 'ptRange'){
-    return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"><input data-idx="${idx}" data-kind="desired" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"><div class="range-name">${row.name}<div class="mini">Cobra apenas os níveis entre o atual e o desejado</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
+    return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"><input data-idx="${idx}" data-kind="desired" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"><div class="range-name" data-field="${row.name}">${row.name}<div class="mini">Cobra apenas os níveis entre o atual e o desejado</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
   }
   const maxAttr = row.max === null || row.max === undefined ? '' : ` max="${row.max}"`;
-  return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="0"${maxAttr} step="1" value="0"><input data-idx="${idx}" data-kind="desired" type="number" min="0"${maxAttr} step="1" value="0"><div class="range-name">${row.name}</div><div class="line-total" id="total-${idx}">0 XP</div></div>`;
+  return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="0"${maxAttr} step="1" value="0"><input data-idx="${idx}" data-kind="desired" type="number" min="0"${maxAttr} step="1" value="0"><div class="range-name" data-field="${row.name}">${row.name}</div><div class="line-total" id="total-${idx}">0 XP</div></div>`;
 }
 function evolutionSelectHTML(slot){
   const orderCost = evolutionOrderCosts[slot-1] || 0;
@@ -741,15 +741,70 @@ let currentProfile = null;
 let loadedCharacters = [];
 let loadedCharacterIndex = null;
 function slugCalc(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/Ç/g,'C').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
-function setCurrentByName(name, value){
-  const target=slugCalc(name);
-  const line=[...document.querySelectorAll('.range-line,.xp-row')].find(el => {
-    const raw=(el.querySelector('.range-name')?.childNodes?.[0]?.textContent || el.querySelector('.range-name')?.textContent || '').trim();
-    return slugCalc(raw)===target || slugCalc(raw).startsWith(target) || target.startsWith(slugCalc(raw));
+function readPath(obj, path){
+  return String(path||'').split('.').reduce((acc,k)=>acc && acc[k] !== undefined ? acc[k] : undefined, obj);
+}
+function mergeObjects(...objs){
+  const out={};
+  objs.forEach(o=>{ if(o && typeof o === 'object') Object.entries(o).forEach(([k,v])=>{ if(v !== undefined && v !== null && v !== '') out[k]=v; }); });
+  return out;
+}
+function normalizePointMap(map){
+  const aliases={
+    vigor:'Vigor', forca:'Força', força:'Força', destreza:'Destreza', inteligencia:'Inteligência', sabedoria:'Sabedoria', carisma:'Carisma',
+    mentalismo:'Mentalismo', mistico:'Místico', dominio:'Domínio', encantamento:'Encantamento', fortaleza:'Fortaleza',
+    somatica:'Somática', recuperacao:'Recuperação', controle:'Controle', raciocinio:'Raciocínio',
+    defesa:'Defesa', esquiva:'Esquiva', acertofisico:'Acerto Físico', acertofis:'Acerto Físico', acfisico:'Acerto Físico',
+    acertomagico:'Acerto Mágico', acertomag:'Acerto Mágico', acmagico:'Acerto Mágico',
+    pericias:'Perícias', pericia:'Perícias', dadosdevida:'Dados de Vida', vida:'Dados de Vida', dadosdemana:'Dados de Mana', mana:'Dados de Mana', dadosdeenergia:'Dados de Energia', energia:'Dados de Energia',
+    regeneracao:'Regeneração'
+  };
+  const out={};
+  if(!map || typeof map !== 'object') return out;
+  Object.entries(map).forEach(([k,v])=>{
+    const key=aliases[slugCalc(k)] || k;
+    const n=Number(v);
+    out[key]=Number.isFinite(n) ? n : 0;
   });
+  return out;
+}
+function getCharacterPoints(c){
+  const sim=c?.simulacao || {};
+  const base=mergeObjects(c?.pontosAtuais, sim?.pontosAtuais);
+  const atributos=normalizePointMap(mergeObjects(c?.atributos, base.atributos, sim?.atributos));
+  const focos=normalizePointMap(mergeObjects(c?.focos, base.focos, sim?.focos));
+  const especiais=normalizePointMap(mergeObjects(c?.especiais, c?.atributosEspeciais, base.especiais, sim?.especiais, sim?.atributosEspeciais));
+  const status=normalizePointMap(mergeObjects(c?.status, c?.statusCombate, base.status, sim?.status, sim?.statusCombate));
+  const extras=normalizePointMap(mergeObjects(c?.extrasXP, base.extras, sim?.extrasXP));
+  const regeneracao = base.regeneracao ?? sim.regeneracao ?? c?.regeneracao ?? sim?.vitalidadesSimuladas?.regeneracao ?? 0;
+  if(regeneracao !== undefined) extras['Regeneração']=Number(regeneracao)||0;
+  return {atributos,focos,especiais,status,extras,regeneracao:Number(regeneracao)||0};
+}
+function findCalcLineByName(name){
+  const target=slugCalc(name);
+  let exact=null;
+  document.querySelectorAll('.range-line,.xp-row').forEach(el=>{
+    const rn=el.querySelector('.range-name');
+    const raw=(rn?.dataset?.field || rn?.childNodes?.[0]?.textContent || rn?.textContent || '').trim();
+    if(slugCalc(raw)===target) exact=el;
+  });
+  return exact;
+}
+function setCurrentByName(name, value, copyToDesired=true){
+  const line=findCalcLineByName(name);
   if(!line) return console.warn('Campo não encontrado na calculadora:', name);
-  const input=line.querySelector('[data-kind="current"]');
-  if(input){ input.value=Number(value)||0; input.dispatchEvent(new Event('input',{bubbles:true})); }
+  const n=Number(value)||0;
+  const current=line.querySelector('[data-kind="current"]');
+  const desired=line.querySelector('[data-kind="desired"]');
+  if(current) current.value=n;
+  if(copyToDesired && desired) desired.value=n;
+  if(current) current.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function clearLoadedPointFields(){
+  document.querySelectorAll('[data-kind="current"],[data-kind="desired"]').forEach(inp=>{
+    if(inp.closest('#ptBox') || inp.closest('#habilidadesBox') || inp.closest('#evolucaoBox') || inp.closest('#criacaoBox')) return;
+    inp.value=0;
+  });
 }
 async function populateCharacterLoader(){
   const sel=document.getElementById('loadCharacterSelect');
@@ -761,21 +816,26 @@ async function populateCharacterLoader(){
 }
 watchAuth(({ profile }) => { currentProfile = profile; populateCharacterLoader(); });
 const loadBtn=document.getElementById('loadCharacterBtn');
-if(loadBtn){ loadBtn.addEventListener('click',()=>{
+function loadSelectedCharacterIntoCalculator(){
   const sel=document.getElementById('loadCharacterSelect'); const c=loadedCharacters[Number(sel?.value)];
   if(!c) return alert('Selecione um personagem salvo.');
   loadedCharacterIndex = Number(sel.value);
-  const pontos=c.simulacao?.pontosAtuais || c.pontosAtuais || {};
-  Object.entries(pontos.atributos||{}).forEach(([k,v])=>setCurrentByName(k,v));
-  Object.entries(pontos.focos||{}).forEach(([k,v])=>setCurrentByName(k,v));
-  Object.entries(pontos.especiais||{}).forEach(([k,v])=>setCurrentByName(k,v));
-  Object.entries(pontos.status||{}).forEach(([k,v])=>setCurrentByName(k,v));
-  if(pontos.regeneracao!==undefined) setCurrentByName('Regeneração', pontos.regeneracao);
+  clearLoadedPointFields();
+  const pontos=getCharacterPoints(c);
+  Object.entries(pontos.atributos||{}).forEach(([k,v])=>setCurrentByName(k,v,true));
+  Object.entries(pontos.focos||{}).forEach(([k,v])=>setCurrentByName(k,v,true));
+  Object.entries(pontos.especiais||{}).forEach(([k,v])=>setCurrentByName(k,v,true));
+  Object.entries(pontos.status||{}).forEach(([k,v])=>setCurrentByName(k,v,true));
+  Object.entries(pontos.extras||{}).forEach(([k,v])=>setCurrentByName(k,v,true));
+  if(pontos.regeneracao!==undefined) setCurrentByName('Regeneração', pontos.regeneracao,true);
   const sim=c.simulacao||{};
   if(sim.xpDisponivel!==undefined) document.getElementById('xpTotal').value=sim.xpDisponivel;
   if(sim.ptDisponivel!==undefined) document.getElementById('ptTotal').value=sim.ptDisponivel;
   if(typeof calc==='function') calc();
-});}
+}
+if(loadBtn){ loadBtn.addEventListener('click', loadSelectedCharacterIntoCalculator); }
+const loadSelect=document.getElementById('loadCharacterSelect');
+if(loadSelect){ loadSelect.addEventListener('change',()=>{ if(loadSelect.value !== '') loadSelectedCharacterIntoCalculator(); }); }
 
 
 function getDesiredRowsByCategory(){
