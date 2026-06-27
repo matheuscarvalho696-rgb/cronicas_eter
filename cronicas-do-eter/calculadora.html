@@ -48,8 +48,27 @@
   table.ref-table { width:100%; border-collapse:collapse; margin-top:1rem; font-size:.88rem; }
   table.ref-table th, table.ref-table td { border:1px solid var(--border); padding:.5rem .8rem; text-align:left; }
   table.ref-table th { font-family:'Cinzel', serif; font-size:.65rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ether-glow); background:rgba(155,111,212,.08); }
-  @media (max-width: 980px){ .calc-wrap{grid-template-columns:1fr;} .sticky{position:static;} }
-  @media (max-width: 720px){ .range-line{grid-template-columns:1fr 1fr 1fr;} .range-name{grid-column:1/-1;} .line-total{text-align:left;} }
+
+  /* v68 — Interface de distribuição espelhando o Editor de Personagem */
+  .xp-sheet-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+  .xp-card{background:rgba(25,17,46,.94);border:1px solid rgba(160,104,255,.55);border-radius:8px;padding:1rem;box-shadow:0 0 0 1px rgba(255,255,255,.025) inset;}
+  .xp-card.full{grid-column:1/-1;}
+  .xp-card h4{font-family:'Cinzel',serif;font-size:1rem;letter-spacing:.16em;text-transform:uppercase;color:#f0d7ff;margin:0 0 .8rem;border-bottom:1px solid rgba(190,132,255,.55);padding-bottom:.5rem;}
+  .xp-card .cat-desc{color:#b8a8d2;margin:.25rem 0 .8rem;font-size:.92rem;}
+  .xp-table{display:grid;gap:.45rem;}
+  .xp-row{display:grid;grid-template-columns:82px 82px 1fr 92px;gap:.45rem;align-items:center;border-bottom:1px solid rgba(160,104,255,.25);padding:.35rem 0;}
+  .xp-row.xp-head{padding-top:0;}
+  .xp-row.qty{grid-template-columns:96px 1fr 92px;}
+  .xp-row.wide{grid-template-columns:1fr 1.15fr 92px;}
+  .xp-row .range-name{font-family:'Cinzel',serif;color:#f0d7ff;font-weight:700;font-size:.92rem;align-self:center;}
+  .xp-row .mini{font-family:'Crimson Text',serif;font-weight:400;letter-spacing:0;text-transform:none;color:#b8a8d2;font-size:.82rem;margin-top:.2rem;}
+  .xp-row input,.xp-row select{box-sizing:border-box;background:#090511;border:1px solid rgba(160,104,255,.6);border-radius:5px;color:#f0d7ff;padding:.62rem .6rem;font-family:'Crimson Text',serif;font-size:1rem;text-align:center;font-weight:700;}
+  .xp-row select{text-align:left;font-weight:400;}
+  .xp-row .line-total{font-family:'Cinzel',serif;color:var(--rune-bright);text-align:right;white-space:nowrap;align-self:center;}
+  .xp-summary-title{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#b8a8d2;}
+
+  @media (max-width: 980px){ .calc-wrap{grid-template-columns:1fr;} .sticky{position:static;} .xp-sheet-grid{grid-template-columns:1fr;} }
+  @media (max-width: 720px){ .range-line{grid-template-columns:1fr 1fr 1fr;} .range-name{grid-column:1/-1;} .line-total{text-align:left;} .xp-row,.xp-row.qty,.xp-row.wide{grid-template-columns:1fr 1fr;} .xp-row .range-name,.xp-row .line-total{grid-column:1/-1;text-align:left;} }
 </style>
 </head>
 <body><nav class="topbar">
@@ -88,7 +107,7 @@
 <p class="breadcrumb"><a href="index.html">Início</a> / Calculadora XP/PT</p>
 <p class="page-eyebrow">Ferramenta do Jogador</p>
 <h1 class="page-title">Calculadora de XP &amp; PT</h1>
-<p class="page-intro">Preencha o valor atual da ficha e o valor desejado. A calculadora soma automaticamente apenas os pontos que faltam comprar.</p>
+<p class="page-intro">Interface reorganizada no mesmo padrão do Editor de Personagem. Ao carregar um personagem, os campos atuais são preenchidos com os dados salvos da ficha.</p>
 </header>
 <section style="padding-top:1rem;"><div class="container">
 <div class="note reveal"><strong>Modelo:</strong> se Vigor está em 1 e o jogador deseja Vigor 30, o sistema calcula o custo dos pontos 2 até 30. Pontos já existentes na ficha não são cobrados novamente.</div>
@@ -99,7 +118,7 @@
   <label>Carregar personagem</label>
   <select id="loadCharacterSelect"><option value="">Selecione um personagem salvo</option></select>
   <button class="reset-btn" id="loadCharacterBtn" type="button" style="margin-top:.6rem">Carregar Pontos Atuais</button>
-  <p class="mini">Carrega atributos, focos, atributos especiais e regeneração salvos no personagem.</p>
+  <p class="mini">Carrega atributos, focos, atributos especiais e status de combate salvos no personagem.</p>
 </div>
 <div class="two">
 <div><label>XP disponível</label><input id="xpTotal" min="0" step="0.25" type="number" value="0"/></div>
@@ -129,14 +148,16 @@
 <button class="tab" data-tab="criacao">Criação de Habilidade</button>
 </div>
 <div class="tab-content active" id="tab-atributos">
-<div class="calc-category"><h4>Atributos Principais</h4><p class="cat-desc">Máximo comum: 30. O custo é calculado por faixa: 1–5, 6–10, 11–15, 16–20, 21–25 e 26–30.</p><div id="atributosBox"></div></div>
+<div class="xp-sheet-grid"><div class="xp-card full"><h4>Atributos Principais</h4><p class="cat-desc">Visual igual ao editor: informe o valor atual do personagem e o valor desejado após gastar XP.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Atributo</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="atributosBox"></div></div></div>
 </div>
 <div class="tab-content" id="tab-focos">
-<div class="calc-category"><h4>Focos</h4><p class="cat-desc">Limite natural de foco: 50 pontos comprados. Pontos bônus devem ser ignorados no campo atual caso você queira calcular apenas XP gasto.</p><div id="focosBox"></div></div>
+<div class="xp-sheet-grid"><div class="xp-card full"><h4>Focos</h4><p class="cat-desc">Mesmo modelo do editor: campos numéricos para pontos atuais e desejados.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Foco</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="focosBox"></div></div></div>
 </div>
 <div class="tab-content" id="tab-extras">
-<div class="calc-category"><h4>Atributos Especiais</h4><p class="cat-desc">Somática, Controle, Recuperação e Raciocínio. Preencha o valor atual e o valor desejado para calcular apenas o XP que falta investir.</p><div id="especiaisBox"></div></div>
-<div class="calc-category"><h4>Combate, Perícias e Vitalidades</h4><p class="cat-desc">Use o mesmo modelo: valor atual na ficha e valor que deseja alcançar.</p><div id="extrasBox"></div></div>
+<div class="xp-sheet-grid">
+<div class="xp-card"><h4>Atributos Especiais</h4><p class="cat-desc">Somática / Recuperação / Controle / Raciocínio.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Atributo</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="especiaisBox"></div></div>
+<div class="xp-card"><h4>Status de Combate</h4><p class="cat-desc">Defesa / Esquiva / Acerto Físico / Acerto Mágico.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Status</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="extrasBox"></div></div>
+</div>
 </div>
 <div class="tab-content" id="tab-pt">
 <div class="calc-category"><h4>Talentos, Regeneração e Custos de PT</h4><p class="cat-desc">Informe quantos talentos deseja comprar. Para Regeneração, preencha o nível atual e o nível desejado.</p><div id="ptBox"></div></div>
@@ -396,15 +417,11 @@ function calcCriacao(){
 const rows = [
   ...['Vigor','Força','Destreza','Inteligência','Sabedoria','Carisma'].map(n=>({box:'atributosBox', type:'xp', key:'atributo', name:n, max:40})),
   ...['Mentalismo','Místico','Domínio','Encantamento','Fortaleza'].map(n=>({box:'focosBox', type:'xp', key:'foco', name:n, max:50})),
-  ...['Somática','Controle','Recuperação','Raciocínio'].map(n=>({box:'especiaisBox', type:'xp', key:'especial', name:n, max:15})),
-  {box:'extrasBox', type:'xp', key:'pericia', name:'Perícias', max:null},
+  ...['Somática','Recuperação','Controle','Raciocínio'].map(n=>({box:'especiaisBox', type:'xp', key:'especial', name:n, max:15})),
+  {box:'extrasBox', type:'xp', key:'unit13', name:'Defesa', max:3},
+  {box:'extrasBox', type:'xp', key:'unit13', name:'Esquiva', max:3},
   {box:'extrasBox', type:'xp', key:'unit13', name:'Acerto Físico', max:3},
   {box:'extrasBox', type:'xp', key:'unit13', name:'Acerto Mágico', max:3},
-  {box:'extrasBox', type:'xp', key:'unit13', name:'Fortitude', max:3},
-  {box:'extrasBox', type:'xp', key:'unit13', name:'Reflexo', max:3},
-  {box:'extrasBox', type:'xp', key:'dadoVida', name:'Dados de Vida', max:3},
-  {box:'extrasBox', type:'xp', key:'dadoManaEnergia', name:'Dados de Mana', max:3},
-  {box:'extrasBox', type:'xp', key:'dadoManaEnergia', name:'Dados de Energia', max:3},
   {box:'ptBox', type:'ptFixed', name:'Talentos Livres / Classe', cost:15},
   {box:'ptBox', type:'ptFixed', name:'Talento Nível 2', cost:30},
   {box:'ptBox', type:'ptFixed', name:'Talento Nível 3', cost:45},
@@ -433,17 +450,17 @@ function costBetween(current, desired, rangeKey){
 }
 function rowHTML(row, idx){
   if(row.type === 'ptFixed'){
-    return `<div class="range-line"><div class="range-name">${row.name}<div class="mini">${row.cost} PT cada</div></div><div><label>Quantidade</label><input data-idx="${idx}" data-kind="qty" type="number" min="0" step="1" value="0"></div><div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
+    return `<div class="xp-row qty"><div><label>Quantidade</label><input data-idx="${idx}" data-kind="qty" type="number" min="0" step="1" value="0"></div><div class="range-name">${row.name}<div class="mini">${row.cost} PT cada</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
   }
   if(row.type === 'abilityRange'){
     const max = abilityProfiles[row.profile]?.length || 0;
-    return `<div class="range-line"><div class="range-name">${row.name}<div class="mini">${row.note || 'Cálculo por Atual → Desejado'}</div></div><div><label>Atual</label><input data-idx="${idx}" data-kind="current" type="number" min="0" max="${max}" step="1" value="0"></div><div><label>Desejado</label><input data-idx="${idx}" data-kind="desired" type="number" min="0" max="${max}" step="1" value="0"></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
+    return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="0" max="${max}" step="1" value="0"><input data-idx="${idx}" data-kind="desired" type="number" min="0" max="${max}" step="1" value="0"><div class="range-name">${row.name}<div class="mini">${row.note || 'Cálculo por Atual → Desejado'}</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
   }
   if(row.type === 'ptRange'){
-    return `<div class="range-line"><div class="range-name">${row.name}<div class="mini">Cobra apenas os níveis entre o atual e o desejado</div></div><div><label>Atual</label><input data-idx="${idx}" data-kind="current" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"></div><div><label>Desejado</label><input data-idx="${idx}" data-kind="desired" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
+    return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"><input data-idx="${idx}" data-kind="desired" type="number" min="${row.min}" max="${row.max}" step="1" value="${row.min}"><div class="range-name">${row.name}<div class="mini">Cobra apenas os níveis entre o atual e o desejado</div></div><div class="line-total" id="total-${idx}">0 PT</div></div>`;
   }
   const maxAttr = row.max === null || row.max === undefined ? '' : ` max="${row.max}"`;
-  return `<div class="range-line"><div class="range-name">${row.name}</div><div><label>Atual</label><input data-idx="${idx}" data-kind="current" type="number" min="0"${maxAttr} step="1" value="0"></div><div><label>Desejado</label><input data-idx="${idx}" data-kind="desired" type="number" min="0"${maxAttr} step="1" value="0"></div><div class="line-total" id="total-${idx}">0 XP</div></div>`;
+  return `<div class="xp-row"><input data-idx="${idx}" data-kind="current" type="number" min="0"${maxAttr} step="1" value="0"><input data-idx="${idx}" data-kind="desired" type="number" min="0"${maxAttr} step="1" value="0"><div class="range-name">${row.name}</div><div class="line-total" id="total-${idx}">0 XP</div></div>`;
 }
 function evolutionSelectHTML(slot){
   const orderCost = evolutionOrderCosts[slot-1] || 0;
@@ -721,16 +738,20 @@ import { watchAuth, saveDistribution, hasApprovedAccess, listMyCharacters } from
 let currentProfile = null;
 let loadedCharacters = [];
 let loadedCharacterIndex = null;
-function slugCalc(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
+function slugCalc(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ç/g,'c').replace(/Ç/g,'C').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();}
 function setCurrentByName(name, value){
-  const line=[...document.querySelectorAll('.range-line')].find(el => (el.querySelector('.range-name')?.textContent||'').trim().toLowerCase().startsWith(String(name).toLowerCase()));
-  if(!line) return;
+  const target=slugCalc(name);
+  const line=[...document.querySelectorAll('.range-line,.xp-row')].find(el => {
+    const raw=(el.querySelector('.range-name')?.childNodes?.[0]?.textContent || el.querySelector('.range-name')?.textContent || '').trim();
+    return slugCalc(raw)===target || slugCalc(raw).startsWith(target) || target.startsWith(slugCalc(raw));
+  });
+  if(!line) return console.warn('Campo não encontrado na calculadora:', name);
   const input=line.querySelector('[data-kind="current"]');
   if(input){ input.value=Number(value)||0; input.dispatchEvent(new Event('input',{bubbles:true})); }
 }
 async function populateCharacterLoader(){
   const sel=document.getElementById('loadCharacterSelect');
-  if(!sel || !hasApprovedAccess(currentProfile) || currentProfile.premium !== true) return;
+  if(!sel || !hasPremiumToolAccess(currentProfile)) return;
   try{
     loadedCharacters=await listMyCharacters();
     sel.innerHTML='<option value="">Selecione um personagem salvo</option>'+loadedCharacters.map((c,i)=>`<option value="${i}">${c.nome||'Sem nome'} — ${c.raca||''} ${c.classe||''}</option>`).join('');
@@ -746,6 +767,7 @@ if(loadBtn){ loadBtn.addEventListener('click',()=>{
   Object.entries(pontos.atributos||{}).forEach(([k,v])=>setCurrentByName(k,v));
   Object.entries(pontos.focos||{}).forEach(([k,v])=>setCurrentByName(k,v));
   Object.entries(pontos.especiais||{}).forEach(([k,v])=>setCurrentByName(k,v));
+  Object.entries(pontos.status||{}).forEach(([k,v])=>setCurrentByName(k,v));
   if(pontos.regeneracao!==undefined) setCurrentByName('Regeneração', pontos.regeneracao);
   const sim=c.simulacao||{};
   if(sim.xpDisponivel!==undefined) document.getElementById('xpTotal').value=sim.xpDisponivel;
@@ -758,8 +780,9 @@ function getDesiredRowsByCategory(){
   const attrs=['Vigor','Força','Destreza','Inteligência','Sabedoria','Carisma'];
   const focos=['Mentalismo','Místico','Domínio','Encantamento','Fortaleza'];
   const especiais=['Somática','Controle','Recuperação','Raciocínio'];
-  const out={atributos:{},focos:{},especiais:{},regeneracao:0};
-  document.querySelectorAll('.range-line').forEach(line=>{
+  const status=['Defesa','Esquiva','Acerto Físico','Acerto Mágico'];
+  const out={atributos:{},focos:{},especiais:{},status:{},regeneracao:0};
+  document.querySelectorAll('.range-line,.xp-row').forEach(line=>{
     const name=(line.querySelector('.range-name')?.childNodes?.[0]?.textContent || line.querySelector('.range-name')?.textContent || '').trim();
     const desired=line.querySelector('[data-kind="desired"]');
     const current=line.querySelector('[data-kind="current"]');
@@ -772,6 +795,7 @@ function getDesiredRowsByCategory(){
     if(attrs.includes(name)) out.atributos[name]=value;
     else if(focos.includes(name)) out.focos[name]=value;
     else if(especiais.includes(name)) out.especiais[name]=value;
+    else if(status.includes(name)) out.status[name]=value;
     else if(name.toLowerCase().startsWith('regeneração') || name.toLowerCase().startsWith('regeneracao')) out.regeneracao=value;
   });
   return out;
