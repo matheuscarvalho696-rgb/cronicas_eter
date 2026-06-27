@@ -107,7 +107,7 @@
 <p class="breadcrumb"><a href="index.html">Início</a> / Calculadora XP/PT</p>
 <p class="page-eyebrow">Ferramenta do Jogador</p>
 <h1 class="page-title">Calculadora de XP &amp; PT</h1>
-<p class="page-intro">Interface reorganizada no mesmo padrão do Editor de Personagem. Ao carregar um personagem, os campos atuais são preenchidos com os dados salvos da ficha.</p>
+<p class="page-intro">Interface reorganizada com a aba XP Principal no mesmo padrão do Editor de Personagem. Ao carregar um personagem, os campos atuais são preenchidos com os dados salvos da ficha.</p>
 </header>
 <section style="padding-top:1rem;"><div class="container">
 <div class="note reveal"><strong>Modelo:</strong> se Vigor está em 1 e o jogador deseja Vigor 30, o sistema calcula o custo dos pontos 2 até 30. Pontos já existentes na ficha não são cobrados novamente.</div>
@@ -139,25 +139,23 @@
 </aside>
 <main class="reveal">
 <div class="tabs">
-<button class="tab active" data-tab="atributos">Atributos</button>
-<button class="tab" data-tab="focos">Focos</button>
+<button class="tab active" data-tab="xp-principal">XP Principal</button>
 <button class="tab" data-tab="extras">Extras de XP</button>
 <button class="tab" data-tab="pt">Gastos em PT</button>
 <button class="tab" data-tab="habilidades">Habilidades</button>
 <button class="tab" data-tab="evolucao">Evolução de Habilidade</button>
 <button class="tab" data-tab="criacao">Criação de Habilidade</button>
 </div>
-<div class="tab-content active" id="tab-atributos">
-<div class="xp-sheet-grid"><div class="xp-card full"><h4>Atributos Principais</h4><p class="cat-desc">Visual igual ao editor: informe o valor atual do personagem e o valor desejado após gastar XP.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Atributo</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="atributosBox"></div></div></div>
-</div>
-<div class="tab-content" id="tab-focos">
-<div class="xp-sheet-grid"><div class="xp-card full"><h4>Focos</h4><p class="cat-desc">Mesmo modelo do editor: campos numéricos para pontos atuais e desejados.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Foco</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="focosBox"></div></div></div>
-</div>
-<div class="tab-content" id="tab-extras">
+<div class="tab-content active" id="tab-xp-principal">
 <div class="xp-sheet-grid">
+<div class="xp-card"><h4>Atributos Principais</h4><p class="cat-desc">Visual igual ao editor: informe o valor atual do personagem e o valor desejado após gastar XP.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Atributo</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="atributosBox"></div></div>
+<div class="xp-card"><h4>Focos</h4><p class="cat-desc">Mesmo modelo do editor: campos numéricos para pontos atuais e desejados.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Foco</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="focosBox"></div></div>
 <div class="xp-card"><h4>Atributos Especiais</h4><p class="cat-desc">Somática / Recuperação / Controle / Raciocínio.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Atributo</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="especiaisBox"></div></div>
 <div class="xp-card"><h4>Status de Combate</h4><p class="cat-desc">Defesa / Esquiva / Acerto Físico / Acerto Mágico.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Status</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="extrasBox"></div></div>
 </div>
+</div>
+<div class="tab-content" id="tab-extras">
+<div class="xp-sheet-grid"><div class="xp-card full"><h4>Extras de XP</h4><p class="cat-desc">Pontos em perícias e dados adicionais de vida, mana ou energia.</p><div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Extra</span><span class="xp-summary-title">Custo</span></div><div class="xp-table" id="xpExtrasBox"></div></div></div>
 </div>
 <div class="tab-content" id="tab-pt">
 <div class="calc-category"><h4>Talentos, Regeneração e Custos de PT</h4><p class="cat-desc">Informe quantos talentos deseja comprar. Para Regeneração, preencha o nível atual e o nível desejado.</p><div id="ptBox"></div></div>
@@ -422,6 +420,10 @@ const rows = [
   {box:'extrasBox', type:'xp', key:'unit13', name:'Esquiva', max:3},
   {box:'extrasBox', type:'xp', key:'unit13', name:'Acerto Físico', max:3},
   {box:'extrasBox', type:'xp', key:'unit13', name:'Acerto Mágico', max:3},
+  {box:'xpExtrasBox', type:'xp', key:'pericia', name:'Perícias', max:null},
+  {box:'xpExtrasBox', type:'xp', key:'dadoVida', name:'Dados de Vida', max:3},
+  {box:'xpExtrasBox', type:'xp', key:'dadoManaEnergia', name:'Dados de Mana', max:3},
+  {box:'xpExtrasBox', type:'xp', key:'dadoManaEnergia', name:'Dados de Energia', max:3},
   {box:'ptBox', type:'ptFixed', name:'Talentos Livres / Classe', cost:15},
   {box:'ptBox', type:'ptFixed', name:'Talento Nível 2', cost:30},
   {box:'ptBox', type:'ptFixed', name:'Talento Nível 3', cost:45},
@@ -493,7 +495,7 @@ function calcEvolution(){
   return total;
 }
 function render(){
-  const boxes = ['atributosBox','focosBox','especiaisBox','extrasBox','ptBox','habilidadesBox','evolucaoBox','criacaoBox'];
+  const boxes = ['atributosBox','focosBox','especiaisBox','extrasBox','xpExtrasBox','ptBox','habilidadesBox','evolucaoBox','criacaoBox'];
   boxes.forEach(id => document.getElementById(id).innerHTML = '');
   rows.forEach((r,i)=> document.getElementById(r.box).insertAdjacentHTML('beforeend', rowHTML(r,i)));
   renderEvolution();
