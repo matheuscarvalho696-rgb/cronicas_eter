@@ -48,6 +48,37 @@ function pointsList(obj){
   const entries=Object.entries(obj).filter(([_,v])=>v!==undefined && v!==null && v!=='' && Number(v)!==0);
   return entries.length ? entries.map(([k,v])=>`${esc(k)} ${esc(v)}`).join(', ') : 'nenhum ponto distribuído';
 }
+function normKey(v){ return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function pickStat(source, aliases){
+  if(!source || typeof source !== 'object') return undefined;
+  const normalized = Object.fromEntries(Object.entries(source).map(([k,v])=>[normKey(k),v]));
+  for(const alias of aliases){
+    const key=normKey(alias);
+    if(normalized[key]!==undefined && normalized[key]!==null && normalized[key]!=='' && Number(normalized[key])!==0) return normalized[key];
+  }
+  return undefined;
+}
+function orderedList(items){
+  return items.map(([label,value])=>`${label} ${value===undefined||value===null||value===''?'-':esc(value)}`).join(' / ');
+}
+function atributosEspeciaisResumo(pontos){
+  const especiais=pontos.especiais||{};
+  return orderedList([
+    ['Somática', pickStat(especiais,['Somática','Somatica'])],
+    ['Recuperação', pickStat(especiais,['Recuperação','Recuperacao','Regeneração','Regeneracao']) ?? pontos.regeneracao],
+    ['Controle', pickStat(especiais,['Controle'])],
+    ['Raciocínio', pickStat(especiais,['Raciocínio','Raciocinio'])]
+  ]);
+}
+function statusCombateResumo(pontos, comb){
+  const status=pontos.status||{};
+  return orderedList([
+    ['Defesa', pickStat(status,['Defesa','CA Fortitude','CAF','Fortitude']) ?? comb.caFortitude ?? comb.caSimulada],
+    ['Esquiva', pickStat(status,['Esquiva','CA Reflexos','CAR','Reflexos']) ?? comb.caReflexos],
+    ['Acerto Físico', pickStat(status,['Acerto Físico','Acerto Fisico','Acerto físico','Ataque Físico','Ataque Fisico']) ?? comb.acertoFisico],
+    ['Acerto Mágico', pickStat(status,['Acerto Mágico','Acerto Magico','Acerto mágico','Ataque Mágico','Ataque Magico']) ?? comb.acertoMagico ?? comb.acertoSimulado]
+  ]);
+}
 
 function manualVitals(c){ return c.vitalidadesManuais || c.manualVitals || {}; }
 function manualEquip(c){ return c.equipamentosManuais || c.manualEquipments || {}; }
@@ -66,7 +97,7 @@ function cardHTML(c){
   const roll20Bio=compactBio(c.roll20Bio||c.resumo?.dica||''); const roll20Image=c.roll20ImageUrl||'';
   const roll20Block=(roll20Bio||roll20Image)?`<div class="roll20-claimed-block">${roll20Image?`<img src="${esc(roll20Image)}" alt="${esc(c.nome||'Personagem')}">`:''}<div class="roll20-claimed-bio"><strong>Descrição importada do Roll20</strong>\n${esc(roll20Bio||'Sem descrição importada.')}</div></div>`:'';
   const hasSheet = hasAnyValue(pontos.atributos)||hasAnyValue(pontos.focos)||hasAnyValue(pontos.especiais)||hasAnyValue(pontos.status)||hasAnyValue(mv)||talentos.length||c.raca||c.classe||c.subclasse||c.especializacao||c.elementoNatural;
-  const details = hasSheet ? `<ul class="sheet-summary-list">${c.raca?`<li>Raça: ${esc(c.raca)}</li>`:''}${c.classe?`<li>Classe: ${esc(c.classe)}</li>`:''}${c.subclasse?`<li>Subclasse: ${esc(c.subclasse)}</li>`:''}${c.especializacao?`<li>Especialização: ${esc(c.especializacao)}</li>`:''}${c.elementoNatural?`<li>Elemento natural: ${esc(c.elementoNatural)}</li>`:''}<li>Ranque inicial: ${esc(c.rankInicial||'-')}</li><li>Pontos concedidos pelo ranque: Atributos ${rankPool.atributos??'-'} / Focos ${rankPool.foco??'-'} / Perícias ${rankPool.pericias??'-'} / Atb. Especial ${rankPool.especial??'-'} / Status ${rankPool.status??'-'}</li><li><strong>Distribuição de atributos:</strong> ${pointsList(pontos.atributos)}</li><li><strong>Distribuição de focos:</strong> ${pointsList(pontos.focos)}</li><li><strong>Distribuição de atributos especiais:</strong> ${pointsList(pontos.especiais)}${pontos.regeneracao!==undefined?` / Regeneração ${esc(pontos.regeneracao)}`:''}</li><li><strong>Status:</strong> ${pointsList(pontos.status)}</li><li>Vitalidades: Vida ${vidaAtual}/${vidaMax} — Mana ${manaAtual}/${manaMax} — Energia ${energiaAtual}/${energiaMax}</li><li>CAF: ${comb.caFortitude??comb.caSimulada??'-'} | CAR: ${comb.caReflexos??'-'} | Resistência: ${comb.resistencia??'-'} | Acerto: +${comb.acertoSimulado??0}</li><li>Talentos: ${talentos.length?esc(talentos.join(', ')):'nenhum'}</li><li>Salvo em: ${fmtDate(c.createdAt)}</li></ul>` : `<p class="sheet-muted">Ficha do site ainda não preenchida. Clique em Editar Personagem para distribuir os pontos.</p>`;
+  const details = hasSheet ? `<ul class="sheet-summary-list">${c.raca?`<li>Raça: ${esc(c.raca)}</li>`:''}${c.classe?`<li>Classe: ${esc(c.classe)}</li>`:''}${c.subclasse?`<li>Subclasse: ${esc(c.subclasse)}</li>`:''}${c.especializacao?`<li>Especialização: ${esc(c.especializacao)}</li>`:''}${c.elementoNatural?`<li>Elemento natural: ${esc(c.elementoNatural)}</li>`:''}<li>Ranque inicial: ${esc(c.rankInicial||'-')}</li><li>Pontos concedidos pelo ranque: Atributos ${rankPool.atributos??'-'} / Focos ${rankPool.foco??'-'} / Perícias ${rankPool.pericias??'-'} / Atb. Especial ${rankPool.especial??'-'} / Status ${rankPool.status??'-'}</li><li><strong>Distribuição de atributos:</strong> ${pointsList(pontos.atributos)}</li><li><strong>Distribuição de focos:</strong> ${pointsList(pontos.focos)}</li><li><strong>Atributos Especiais:</strong> ${atributosEspeciaisResumo(pontos)}</li><li><strong>Status de Combate:</strong> ${statusCombateResumo(pontos, comb)}</li><li>Vitalidades: Vida ${vidaAtual}/${vidaMax} — Mana ${manaAtual}/${manaMax} — Energia ${energiaAtual}/${energiaMax}</li><li>Talentos: ${talentos.length?esc(talentos.join(', ')):'nenhum'}</li><li>Salvo em: ${fmtDate(c.createdAt)}</li></ul>` : `<p class="sheet-muted">Ficha do site ainda não preenchida. Clique em Editar Personagem para distribuir os pontos.</p>`;
   return `<div class="info-card character-card" data-id="${c.id}"><h4>${esc(c.nome||'Personagem sem nome')}</h4>${roll20Block}${details}<div class="character-actions"><a class="btn-secondary" href="personagem-editor.html?id=${encodeURIComponent(c.id)}" target="_blank" rel="noopener">Editar Personagem</a><button class="btn-secondary delete-character-btn" data-id="${c.id}" type="button">Deletar personagem</button></div><div class="character-editor" hidden><h4>Editor rápido</h4><p class="sheet-muted">Use estes campos para controlar valores atuais, equipamentos manuais e anotações sem recalcular a ficha. Valores preenchidos substituem os valores simulados exibidos acima.</p>${vitEdit}<h4 style="margin-top:1rem">Equipamentos manuais</h4><div class="equipment-manual-grid">${equipEdit}</div><label style="margin-top:1rem;display:block">Anotações</label><textarea class="ether-input notes-field" rows="5">${esc(notes)}</textarea><button class="btn-primary save-edit-btn" data-id="${c.id}" type="button" style="margin-top:.85rem">Salvar alterações</button><p class="sheet-muted editor-msg"></p></div></div>`;
 }
 function bindActions(){
