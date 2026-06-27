@@ -3731,6 +3731,7 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 </tbody></table></div></div>
 </section>
 </div>
+<div id="craftContent" class="is-hidden"></div>
 </main>
 <aside class="market-panel market-sticky">
 <div class="cart-title">Carrinho</div>
@@ -3742,6 +3743,7 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 <div class="sell-box">
 <label><input id="sellMode" type="checkbox"/> Modo venda: calcular metade do valor</label>
 </div>
+<button class="market-btn" id="confirmCart">Confirmar compra</button>
 <button class="market-btn" id="clearCart">Limpar carrinho</button>
 </aside>
 </div>
@@ -3815,7 +3817,7 @@ function buildTabs() {
   const tabs = document.getElementById('marketTabs');
   tabs.innerHTML = '';
   groupOrder.forEach(g => {
-    const count = g === 'Criação de Equipamentos' ? '' : ' (' + document.querySelectorAll(`.market-row[data-group="${CSS.escape(g)}"]`).length + ')';
+    const count = g === 'Criação de Equipamentos' ? '' : ' (' + Array.from(document.querySelectorAll('.market-row')).filter(r => r.dataset.group === g).length + ')';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'market-tab' + (g===activeGroup ? ' active' : '');
@@ -3935,51 +3937,161 @@ function updateCrafting() {
 }
 function renderMarket() {
   if(activeGroup === 'Criação de Equipamentos') { renderCrafting(); return; }
-  buildTabs(); buildSubFilter();
-  document.getElementById('marketContent').classList.remove('is-hidden');
-  document.getElementById('craftContent').classList.add('is-hidden');
-  const q = normalizeText(document.getElementById('marketSearch').value);
-  const sub = document.getElementById('subFilter').value;
+  buildTabs();
+  buildSubFilter();
+  const marketContent = document.getElementById('marketContent');
+  const craftContent = document.getElementById('craftContent');
+  if(marketContent) marketContent.classList.remove('is-hidden');
+  if(craftContent) craftContent.classList.add('is-hidden');
+
+  const q = normalizeText(document.getElementById('marketSearch')?.value || '');
+  const sub = document.getElementById('subFilter')?.value || '';
   let visibleRows = 0;
+
   document.querySelectorAll('.market-row').forEach(row => {
     const okGroup = row.dataset.group === activeGroup;
     const okSub = !sub || row.dataset.category === sub;
-    const okSearch = !q || normalizeText(row.dataset.search).includes(q);
+    const searchable = [
+      row.dataset.search,
+      row.dataset.group,
+      row.dataset.category,
+      row.querySelector('[data-name]')?.textContent,
+      row.querySelector('[data-price]')?.textContent,
+      row.querySelector('[data-details]')?.textContent,
+      row.textContent
+    ].filter(Boolean).join(' ');
+    const okSearch = !q || normalizeText(searchable).includes(q);
     const show = okGroup && okSub && okSearch;
     row.classList.toggle('is-hidden', !show);
     if(show) visibleRows++;
   });
+
   document.querySelectorAll('[data-category-section]').forEach(sec => {
-    const hasVisible = Array.from(sec.querySelectorAll('.market-row')).some(r=>!r.classList.contains('is-hidden'));
-    sec.classList.toggle('is-hidden', !hasVisible || sec.closest('[data-group-section]').dataset.groupSection !== activeGroup);
+    const groupSec = sec.closest('[data-group-section]');
+    const hasVisible = Array.from(sec.querySelectorAll('.market-row')).some(r => !r.classList.contains('is-hidden'));
+    sec.classList.toggle('is-hidden', !hasVisible || !groupSec || groupSec.dataset.groupSection !== activeGroup);
   });
-  document.querySelectorAll('[data-group-section]').forEach(sec => { sec.classList.toggle('is-hidden', sec.dataset.groupSection !== activeGroup); });
+  document.querySelectorAll('[data-group-section]').forEach(sec => {
+    sec.classList.toggle('is-hidden', sec.dataset.groupSection !== activeGroup);
+  });
   document.getElementById('marketCount').textContent = `${visibleRows} item(ns) exibido(s) nesta aba.`;
   updateCart();
 }
-function updateCart() {
-  const sell = document.getElementById('sellMode').checked;
+function getSelectedCartItems() {
+  const sell = document.getElementById('sellMode')?.checked || false;
   const factor = sell ? 0.5 : 1;
-  let total = 0;
-  const selected = [];
-  document.querySelectorAll('.market-check:checked').forEach(ch => {
+  return Array.from(document.querySelectorAll('.market-check:checked')).map(ch => {
     const row = ch.closest('tr');
-    const qtyEl = row.querySelector('.qty-input');
-    const qty = Math.max(1, parseInt(qtyEl.value)||1);
-    const name = row.querySelector('[data-name]').textContent.trim();
-    const price = displayPrice(row.querySelector('[data-price]').textContent.trim());
-    const line = parsePrice(price) * qty * factor;
-    total += line;
-    selected.push(`<div class="cart-line"><div>${safe(name)}<small>${qty} × ${safe(price)}${sell?' × 50%':''}</small></div><div class="price">${formatCoins(line)}</div></div>`);
+    const qtyEl = row?.querySelector('.qty-input');
+    const qty = Math.max(1, parseInt(qtyEl?.value, 10) || 1);
+    const name = row?.querySelector('[data-name]')?.textContent.trim() || 'Item sem nome';
+    const category = row?.dataset.category || '-';
+    const group = row?.dataset.group || '-';
+    const details = row?.querySelector('[data-details]')?.textContent.trim() || '-';
+    const price = displayPrice(row?.querySelector('[data-price]')?.textContent.trim() || '0 PC');
+    const unitPC = parsePrice(price) * factor;
+    const subtotalPC = unitPC * qty;
+    return { name, category, group, details, qty, price, unitPC, subtotalPC, sell };
   });
+}
+function updateCart() {
+  const items = getSelectedCartItems();
+  const total = items.reduce((sum, item) => sum + item.subtotalPC, 0);
+  const selected = items.map(item => `<div class="cart-line"><div>${safe(item.name)}<small>${item.qty} × ${safe(item.price)}${item.sell?' × 50%':''}</small></div><div class="price">${formatCoins(item.subtotalPC)}</div></div>`);
   document.getElementById('cartList').innerHTML = selected.length ? selected.join('') : '<p class="item-details">Nenhum item selecionado.</p>';
   document.getElementById('totalPO').textContent = formatPO(total);
   document.getElementById('totalCoins').textContent = formatCoins(total);
+}
+function buildMarketReportHTML(items) {
+  const total = items.reduce((sum, item) => sum + item.subtotalPC, 0);
+  const now = new Date();
+  const dateText = now.toLocaleString('pt-BR');
+  const mode = items.some(item => item.sell) ? 'Venda (50% do valor)' : 'Compra';
+  const rows = items.map((item, idx) => `<tr>
+    <td>${idx + 1}</td>
+    <td><strong>${safe(item.name)}</strong><br><small>${safe(item.group)} / ${safe(item.category)}</small></td>
+    <td>${item.qty}</td>
+    <td>${safe(item.price)}${item.sell ? '<br><small>50% aplicado</small>' : ''}</td>
+    <td>${formatCoins(item.subtotalPC)}<br><small>${formatPO(item.subtotalPC)}</small></td>
+  </tr>`).join('');
+  const details = items.map(item => `<section class="detail-block"><h3>${safe(item.name)}</h3><p><b>Categoria:</b> ${safe(item.group)} / ${safe(item.category)}</p><p><b>Detalhes:</b> ${safe(item.details)}</p></section>`).join('');
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório de Mercado — Crônicas do Éter</title>
+<style>
+  body{background:#f4f1e8;color:#15110d;font-family:Georgia,'Times New Roman',serif;margin:0;padding:32px;}
+  .page{max-width:980px;margin:0 auto;background:#fffdf7;border:1px solid #b79b62;padding:42px;box-shadow:0 10px 35px rgba(0,0,0,.12);}
+  h1{font-size:30px;margin:0 0 8px;text-align:center;letter-spacing:.04em;text-transform:uppercase;}
+  .subtitle{text-align:center;margin:0 0 28px;color:#5f4a2b;}
+  h2{font-size:17px;margin:28px 0 10px;border-bottom:1px solid #b79b62;padding-bottom:6px;text-transform:uppercase;letter-spacing:.08em;}
+  h3{font-size:15px;margin:0 0 6px;color:#2b2117;}
+  p{font-size:15px;line-height:1.45;margin:5px 0;white-space:pre-wrap;}
+  table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px;}
+  th,td{border:1px solid #d2bb85;padding:9px;vertical-align:top;text-align:left;}
+  th{background:#efe3c8;text-transform:uppercase;font-size:12px;letter-spacing:.06em;}
+  small{color:#5f4a2b;}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0;}
+  .box{border:1px solid #d2bb85;background:#fbf4e4;padding:12px;}
+  .box span{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#5f4a2b;}
+  .box strong{font-size:18px;}
+  .detail-block{border-bottom:1px dashed #d2bb85;padding:12px 0;}
+  .actions{display:flex;gap:10px;justify-content:center;margin-bottom:22px;}
+  button{background:#17110d;color:#f6e4b6;border:1px solid #b79b62;padding:10px 16px;cursor:pointer;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;}
+  @media print{body{background:white;padding:0}.actions{display:none}.page{box-shadow:none;border:0;max-width:none;padding:24px}.summary{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="actions"><button onclick="window.print()">Salvar em PDF</button></div>
+<main class="page">
+<h1>Crônicas do Éter</h1>
+<p class="subtitle">Relatório de Mercado</p>
+<div class="summary">
+  <div class="box"><span>Operação</span><strong>${safe(mode)}</strong></div>
+  <div class="box"><span>Data</span><strong>${safe(dateText)}</strong></div>
+  <div class="box"><span>Total</span><strong>${formatCoins(total)}</strong></div>
+</div>
+<h2>Resumo das Compras</h2>
+<table><thead><tr><th>#</th><th>Item</th><th>Qtd.</th><th>Valor unitário</th><th>Subtotal</th></tr></thead><tbody>${rows}</tbody></table>
+<h2>Total Geral</h2>
+<p><b>Total em moedas:</b> ${formatCoins(total)}</p>
+<p><b>Total convertido em PO:</b> ${formatPO(total)}</p>
+<h2>Detalhes dos Itens</h2>
+${details}
+</main>
+</body>
+</html>`;
+}
+function openMarketReport() {
+  const items = getSelectedCartItems();
+  if(!items.length) {
+    alert('Selecione pelo menos um item antes de confirmar a compra.');
+    return;
+  }
+  const html = buildMarketReportHTML(items);
+  const win = window.open('', '_blank');
+  if(win) {
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    return;
+  }
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'relatorio-mercado-cronicas-do-eter.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 initializePriceLabels();
 document.getElementById('marketSearch').addEventListener('input', renderMarket);
 document.getElementById('subFilter').addEventListener('change', renderMarket);
 document.getElementById('sellMode').addEventListener('change', updateCart);
+document.getElementById('confirmCart').addEventListener('click', openMarketReport);
 document.getElementById('clearCart').addEventListener('click', () => { document.querySelectorAll('.market-check').forEach(ch=>ch.checked=false); updateCart(); });
 document.querySelectorAll('.market-check, .qty-input').forEach(el => el.addEventListener('input', updateCart));
 document.querySelectorAll('.market-check').forEach(el => el.addEventListener('change', updateCart));
