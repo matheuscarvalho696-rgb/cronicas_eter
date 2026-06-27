@@ -24,6 +24,8 @@
 .craft-kv strong{color:var(--silver-bright)}
 .craft-list{margin:.5rem 0 0 1.1rem;color:var(--mist);line-height:1.45}
 .craft-pill{display:inline-block;border:1px solid var(--border);padding:.22rem .5rem;margin:.15rem .2rem .15rem 0;color:var(--ether-pale);font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.06em;text-transform:uppercase}
+.craft-btn{width:100%;margin-top:1rem;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mist);background:transparent;border:1px solid var(--border);padding:.75rem;cursor:pointer}
+.craft-btn:hover{border-color:var(--silver-dim);color:var(--silver-bright)}
 .material-table-wrap{overflow:auto;border:1px solid var(--border);background:rgba(0,0,0,.12);margin-top:1rem}
 table.material-table{width:100%;border-collapse:collapse;min-width:760px;font-size:.92rem}
 .material-table th,.material-table td{border-bottom:1px solid var(--border);padding:.65rem .75rem;text-align:left;vertical-align:top}
@@ -68,7 +70,7 @@ table.material-table{width:100%;border-collapse:collapse;min-width:760px;font-si
 <p class="page-eyebrow">Ferramenta do Jogador</p>
 <h1 class="page-title">Criação de Equipamentos</h1>
 <p class="page-intro">Escolha um equipamento do mercado e o material de criação. O sistema indica automaticamente os materiais necessários, teste de criação, efeito de forja e novo valor de mercado.</p>
-<div class="tool-tabs access-tool-tabs" style="justify-content:center; margin-top:1.5rem;"><a class="tool-tab requires-auth" href="mercado.html">Mercado</a><a class="tool-tab active requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a><span class="tool-tab disabled-tab">Acesso por login em breve</span></div></header>
+</header>
 <section style="padding-top:1rem;"><div class="container">
 <div class="craft-wrap">
 <main class="craft-panel reveal">
@@ -77,6 +79,7 @@ table.material-table{width:100%;border-collapse:collapse;min-width:760px;font-si
 <div class="craft-field"><label for="craftType">Tipo de Equipamento</label><select id="craftType"></select></div>
 <div class="craft-field"><label for="craftCategory">Categoria</label><select id="craftCategory"></select></div>
 <div class="craft-field full"><label for="craftItem">Equipamento do Mercado</label><select id="craftItem"></select></div>
+<div class="craft-field full"><label for="craftCustomName">Nome do Equipamento</label><input id="craftCustomName" placeholder="Ex: Espada da Noite e da Chama" type="text"/></div>
 <div class="craft-field"><label for="craftMaterial">Material de Criação</label><select id="craftMaterial"></select></div>
 <div class="craft-field"><label for="craftIncrustation">Material de Incrustração</label><select id="craftIncrustation"></select></div>
 <div class="craft-field" id="effectChoiceBox" style="display:none;"><label for="craftEffectChoice">Efeito para Acessório</label><select id="craftEffectChoice"><option value="dano">Dano</option><option value="resistencia">Resistência</option></select></div>
@@ -84,7 +87,7 @@ table.material-table{width:100%;border-collapse:collapse;min-width:760px;font-si
 <div class="craft-card"><h3 class="craft-title">Item Selecionado</h3><div class="craft-muted" id="itemInfo"></div></div>
 <div class="material-table-wrap"><table class="material-table"><thead><tr><th>Material</th><th>Fundição</th><th>Produto</th><th>Efeito Ofensivo</th><th>Efeito Defensivo</th><th>Valor</th><th>Forja</th></tr></thead><tbody id="materialsTable"></tbody></table></div>
 </main>
-<aside class="craft-panel craft-sticky reveal"><h2 class="craft-title">Resultado da Criação</h2><div id="craftResult"></div></aside>
+<aside class="craft-panel craft-sticky reveal"><h2 class="craft-title">Resultado da Criação</h2><div id="craftResult"></div><button class="craft-btn" id="generateCraftReport" type="button">Gerar Relatório</button></aside>
 </div>
 </div></section>
 <footer><p>© 2025 Crônicas do Éter. Sistema de RPG de Mesa.</p></footer>
@@ -174,20 +177,45 @@ function materialsNeeded(item, mat, rec){
   if(item.lendario){ const leg=LEGENDARY_SETS[item.conjuntoLendario]; if(leg) lines.push(`${leg.criacao} ${leg.material} — material obrigatório (${leg.obtencao})`); }
   return lines;
 }
-function updateCraft(){
-  const item=chosen(); if(!item) return; const mat=material(); const inc=incrustation(); const rec=craftRecipe(item); const access=['Anel','Colar'].includes(item.tipoCriacao);
-  document.getElementById('effectChoiceBox').style.display=access?'':'none';
+function escapeHtml(str){ return String(str ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function getCraftData(){
+  const item=chosen(); if(!item) return null;
+  const mat=material(); const inc=incrustation(); const rec=craftRecipe(item); const access=['Anel','Colar'].includes(item.tipoCriacao);
   let effect='--';
   if(item.tipoCriacao==='Arma') effect=mat.dano;
   else if(['Armadura','Veste','Escudo'].includes(item.tipoCriacao)) effect=mat.resistencia;
   else if(access) effect=(document.getElementById('craftEffectChoice').value==='dano'?mat.dano:mat.resistencia);
   else effect=mat.resistencia !== '--' ? mat.resistencia : mat.dano;
-  const priceRaw=parsePrice(item.preco).raw;
-  document.getElementById('itemInfo').innerHTML=`<span class="craft-pill">${item.tipoCriacao}</span><span class="craft-pill">${item.categoria}</span><span class="craft-pill">Requisito ${getReq(item)||'--'}</span>${item.lendario?'<span class="craft-pill">Lendário</span>':''}<p><strong>${item.nome}</strong></p><p>${item.detalhes||'Sem detalhes.'}</p><p>Valor base: <strong>${priceRaw}</strong></p>`;
+  const customRaw=(document.getElementById('craftCustomName')?.value || '').trim();
+  const finalName=customRaw || item.nome;
   const needed=materialsNeeded(item, mat, rec);
-  document.getElementById('craftResult').innerHTML=`<div class="craft-kv"><span>Equipamento</span><strong>${item.nome}</strong></div><div class="craft-kv"><span>Tipo</span><strong>${item.tipoCriacao}</strong></div><div class="craft-kv"><span>Material</span><strong>${mat.nome}</strong></div><div class="craft-kv"><span>Modelo</span><strong>${rec.modela}</strong></div><div class="craft-kv"><span>Teste de criação</span><strong>${rec.teste}</strong></div><div class="craft-kv"><span>Requisito do material</span><strong>${mat.requisitoForja}</strong></div><div class="craft-kv"><span>Efeito de forja</span><strong>${effect}</strong></div><div class="craft-kv"><span>Material de incrustação</span><strong>${inc.nome}</strong></div><div class="craft-kv"><span>Efeito de incrustação</span><strong>${inc.efeito}</strong></div>${item.lendario?`<div class="craft-kv"><span>Material lendário obrigatório</span><strong>${LEGENDARY_SETS[item.conjuntoLendario]?.criacao||3} ${LEGENDARY_SETS[item.conjuntoLendario]?.material||''}</strong></div>`:''}<div class="craft-kv"><span>Valor final</span><strong>${formatPrice(item.preco, mat.valor + (inc.valor||0))}</strong></div><div class="craft-card"><h3 class="craft-title">Materiais Necessários</h3><ul class="craft-list">${needed.map(x=>`<li>${x}</li>`).join('')}</ul></div><p class="craft-muted" style="margin-top:1rem;">Joias são materiais de incrustação: Safira, Rubi, Ametista, Quartzo e Esmeralda. A primeira exige Encantamento Arcano 18 e cada nova incrustação aumenta a dificuldade em +9.</p>`;
+  const finalPrice=formatPrice(item.preco, mat.valor + (inc.valor||0));
+  return {item, mat, inc, rec, access, effect, customRaw, finalName, needed, finalPrice, priceRaw:parsePrice(item.preco).raw};
 }
-document.addEventListener('DOMContentLoaded',()=>{ setOptions(document.getElementById('craftType'), ['Todos',...[...new Set(CRAFT_ITEMS.map(i=>i.tipoCriacao))]]); setOptions(document.getElementById('craftMaterial'), FORGE_MATERIALS.map(m=>m.nome)); setOptions(document.getElementById('craftIncrustation'), INCRUSTATION_MATERIALS.map(m=>m.nome)); renderMaterials(); refreshCategories(); document.getElementById('craftType').addEventListener('change', refreshCategories); document.getElementById('craftCategory').addEventListener('change', refreshItems); document.getElementById('craftItem').addEventListener('change', updateCraft); document.getElementById('craftMaterial').addEventListener('change', updateCraft); document.getElementById('craftIncrustation').addEventListener('change', updateCraft); document.getElementById('craftEffectChoice').addEventListener('change', updateCraft); });
+function updateCraft(){
+  const data=getCraftData(); if(!data) return;
+  const {item, mat, inc, rec, access, effect, finalName, needed, finalPrice, priceRaw}=data;
+  document.getElementById('effectChoiceBox').style.display=access?'':'none';
+  document.getElementById('itemInfo').innerHTML=`<span class="craft-pill">${escapeHtml(item.tipoCriacao)}</span><span class="craft-pill">${escapeHtml(item.categoria)}</span><span class="craft-pill">Requisito ${escapeHtml(getReq(item)||'--')}</span>${item.lendario?'<span class="craft-pill">Lendário</span>':''}<p><strong>${escapeHtml(item.nome)}</strong></p><p>${escapeHtml(item.detalhes||'Sem detalhes.')}</p><p>Valor base: <strong>${escapeHtml(priceRaw)}</strong></p>`;
+  document.getElementById('craftResult').innerHTML=`<div class="craft-kv"><span>Nome final</span><strong>${escapeHtml(finalName)}</strong></div><div class="craft-kv"><span>Equipamento base</span><strong>${escapeHtml(item.nome)}</strong></div><div class="craft-kv"><span>Tipo</span><strong>${escapeHtml(item.tipoCriacao)}</strong></div><div class="craft-kv"><span>Material</span><strong>${escapeHtml(mat.nome)}</strong></div><div class="craft-kv"><span>Modelo</span><strong>${escapeHtml(rec.modela)}</strong></div><div class="craft-kv"><span>Teste de criação</span><strong>${escapeHtml(rec.teste)}</strong></div><div class="craft-kv"><span>Requisito do material</span><strong>${escapeHtml(mat.requisitoForja)}</strong></div><div class="craft-kv"><span>Efeito de forja</span><strong>${escapeHtml(effect)}</strong></div><div class="craft-kv"><span>Material de incrustação</span><strong>${escapeHtml(inc.nome)}</strong></div><div class="craft-kv"><span>Efeito de incrustação</span><strong>${escapeHtml(inc.efeito)}</strong></div>${item.lendario?`<div class="craft-kv"><span>Material lendário obrigatório</span><strong>${escapeHtml(LEGENDARY_SETS[item.conjuntoLendario]?.criacao||3)} ${escapeHtml(LEGENDARY_SETS[item.conjuntoLendario]?.material||'')}</strong></div>`:''}<div class="craft-kv"><span>Valor final</span><strong>${escapeHtml(finalPrice)}</strong></div><div class="craft-card"><h3 class="craft-title">Materiais Necessários</h3><ul class="craft-list">${needed.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></div><p class="craft-muted" style="margin-top:1rem;">Joias são materiais de incrustação: Safira, Rubi, Ametista, Quartzo e Esmeralda. A primeira exige Encantamento Arcano 18 e cada nova incrustação aumenta a dificuldade em +9.</p>`;
+}
+function buildCraftReportHTML(){
+  const data=getCraftData(); if(!data) return '';
+  const {item, mat, inc, rec, effect, finalName, needed, finalPrice, priceRaw}=data;
+  const now=new Date().toLocaleString('pt-BR');
+  const materialsRows=needed.map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Relatório de Criação — Crônicas do Éter</title><style>
+  body{background:#f4f1e8;color:#15110d;font-family:Georgia,'Times New Roman',serif;margin:0;padding:32px}.page{max-width:900px;margin:0 auto;background:#fffdf7;border:1px solid #b79b62;padding:42px;box-shadow:0 10px 35px rgba(0,0,0,.12)}h1{font-size:30px;margin:0 0 8px;text-align:center;letter-spacing:.04em;text-transform:uppercase}.subtitle{text-align:center;margin:0 0 28px;color:#5f4a2b}h2{font-size:17px;margin:28px 0 10px;border-bottom:1px solid #b79b62;padding-bottom:6px;text-transform:uppercase;letter-spacing:.08em}p,li{font-size:15px;line-height:1.45}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.box{border:1px solid #d2bb85;background:#fbf4e4;padding:12px}.box span{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#5f4a2b}.box strong{font-size:18px}.kv{display:grid;grid-template-columns:240px 1fr;border-bottom:1px dashed #d2bb85;padding:8px 0}.kv span{color:#5f4a2b}.actions{display:flex;gap:10px;justify-content:center;margin-bottom:22px}button{background:#17110d;color:#f6e4b6;border:1px solid #b79b62;padding:10px 16px;cursor:pointer;font-weight:bold;letter-spacing:.05em;text-transform:uppercase}@media print{body{background:white;padding:0}.actions{display:none}.page{box-shadow:none;border:0;max-width:none;padding:24px}.summary{grid-template-columns:repeat(3,1fr)}}
+</style></head><body><div class="actions"><button onclick="window.print()">Salvar em PDF</button></div><main class="page"><h1>Crônicas do Éter</h1><p class="subtitle">Relatório de Criação de Equipamento</p><div class="summary"><div class="box"><span>Equipamento</span><strong>${escapeHtml(finalName)}</strong></div><div class="box"><span>Data</span><strong>${escapeHtml(now)}</strong></div><div class="box"><span>Valor final</span><strong>${escapeHtml(finalPrice)}</strong></div></div><h2>Resumo</h2><div class="kv"><span>Nome final</span><strong>${escapeHtml(finalName)}</strong></div><div class="kv"><span>Equipamento base</span><strong>${escapeHtml(item.nome)}</strong></div><div class="kv"><span>Categoria</span><strong>${escapeHtml(item.categoria)}</strong></div><div class="kv"><span>Tipo</span><strong>${escapeHtml(item.tipoCriacao)}</strong></div><div class="kv"><span>Valor base</span><strong>${escapeHtml(priceRaw)}</strong></div><div class="kv"><span>Valor final</span><strong>${escapeHtml(finalPrice)}</strong></div><h2>Forja</h2><div class="kv"><span>Material principal</span><strong>${escapeHtml(mat.nome)}</strong></div><div class="kv"><span>Modelo</span><strong>${escapeHtml(rec.modela)}</strong></div><div class="kv"><span>Teste de criação</span><strong>${escapeHtml(rec.teste)}</strong></div><div class="kv"><span>Requisito do material</span><strong>${escapeHtml(mat.requisitoForja)}</strong></div><div class="kv"><span>Efeito de forja</span><strong>${escapeHtml(effect)}</strong></div><h2>Incrustação</h2><div class="kv"><span>Material</span><strong>${escapeHtml(inc.nome)}</strong></div><div class="kv"><span>Efeito</span><strong>${escapeHtml(inc.efeito)}</strong></div><h2>Materiais Necessários</h2><ul>${materialsRows}</ul><h2>Detalhes do Item Base</h2><p>${escapeHtml(item.detalhes||'Sem detalhes.')}</p></main></body></html>`;
+}
+function openCraftReport(){
+  const html=buildCraftReportHTML();
+  const win=window.open('', '_blank');
+  if(win){ win.document.open(); win.document.write(html); win.document.close(); return; }
+  const blob=new Blob([html], {type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='relatorio-criacao-equipamento-cronicas-do-eter.html'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+document.addEventListener('DOMContentLoaded',()=>{ setOptions(document.getElementById('craftType'), ['Todos',...[...new Set(CRAFT_ITEMS.map(i=>i.tipoCriacao))]]); setOptions(document.getElementById('craftMaterial'), FORGE_MATERIALS.map(m=>m.nome)); setOptions(document.getElementById('craftIncrustation'), INCRUSTATION_MATERIALS.map(m=>m.nome)); renderMaterials(); refreshCategories(); document.getElementById('craftType').addEventListener('change', refreshCategories); document.getElementById('craftCategory').addEventListener('change', refreshItems); document.getElementById('craftItem').addEventListener('change', updateCraft); document.getElementById('craftMaterial').addEventListener('change', updateCraft); document.getElementById('craftIncrustation').addEventListener('change', updateCraft); document.getElementById('craftEffectChoice').addEventListener('change', updateCraft); document.getElementById('craftCustomName').addEventListener('input', updateCraft); document.getElementById('generateCraftReport').addEventListener('click', openCraftReport); });
 </script>
 <script type="module" src="auth-widget.js"></script>
 <script type="module" src="auth-guard.js"></script>
