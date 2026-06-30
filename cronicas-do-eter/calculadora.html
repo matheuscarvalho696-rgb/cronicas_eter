@@ -70,6 +70,9 @@
   .discount-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;margin-top:.8rem;}
   .discount-field{display:none;}
   .discount-field.active{display:block;}
+  .purchase-notes{margin-top:1rem;border-top:1px solid rgba(190,132,255,.35);padding-top:.9rem;}
+  .purchase-notes label{display:block;color:#f0d7ff;font-family:'Cinzel',serif;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;margin-bottom:.45rem;}
+  .purchase-notes textarea{min-height:115px;}
   @media (max-width: 720px){ .discount-grid{grid-template-columns:1fr;} }
 
   @media (max-width: 980px){ .calc-wrap{grid-template-columns:1fr;} .sticky{position:static;} .xp-sheet-grid{grid-template-columns:1fr;} }
@@ -171,6 +174,10 @@
       <div class="discount-field" id="discountTalentField"><label>Valor de desconto em talentos</label><input id="discountTalentValue" min="0" step="1" type="number" value="0"></div>
     </div>
     <div class="xp-table" id="talentosBox"></div>
+    <div class="purchase-notes">
+      <label>Talentos comprados</label>
+      <textarea id="talentosComprados" rows="5" placeholder="Ex.: Reflexos Aprimorados, Elementalista 2, Luz Guia..."></textarea>
+    </div>
   </div>
   <div class="xp-card">
     <h4>Habilidades</h4>
@@ -183,6 +190,10 @@
     </div>
     <div class="xp-row xp-head"><span class="xp-summary-title">Atual</span><span class="xp-summary-title">Desejado</span><span class="xp-summary-title">Habilidade</span><span class="xp-summary-title">Custo</span></div>
     <div class="xp-table" id="habilidadesBox"></div>
+    <div class="purchase-notes">
+      <label>Habilidades compradas</label>
+      <textarea id="habilidadesCompradas" rows="5" placeholder="Ex.: Punição Divina, Tempestade Celestial, Barreira de Vento..."></textarea>
+    </div>
   </div>
   <div class="xp-card full">
     <h4>Extras</h4>
@@ -558,6 +569,18 @@ function refreshDiscountFields(){
 function calc(){
   refreshDiscountFields();
   let xp = 0, pt = 0;
+  const talentosComprados = document.getElementById('talentosComprados')?.value?.trim() || '';
+  const habilidadesCompradas = document.getElementById('habilidadesCompradas')?.value?.trim() || '';
+  if(talentosComprados){
+    lines.push('TALENTOS COMPRADOS');
+    talentosComprados.split('\n').forEach(l=>{ if(l.trim()) lines.push('  ' + l.trim()); });
+    lines.push('');
+  }
+  if(habilidadesCompradas){
+    lines.push('HABILIDADES COMPRADAS');
+    habilidadesCompradas.split('\n').forEach(l=>{ if(l.trim()) lines.push('  ' + l.trim()); });
+    lines.push('');
+  }
   rows.forEach((r,i)=>{
     let total = 0;
     if(r.type === 'ptFixed'){
