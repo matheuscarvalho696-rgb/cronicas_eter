@@ -8,7 +8,7 @@
 <link href="styles.css" rel="stylesheet"/>
 <style>
 .book-toolbar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:1rem 0 1.2rem;padding:1rem;background:var(--surface);border:1px solid var(--border)}
-.book-toolbar .actions{display:flex;gap:.6rem;flex-wrap:wrap}.book-frame{width:100%;height:calc(100vh - 260px);min-height:620px;border:1px solid var(--border);background:#111}.book-fallback{padding:1rem;border:1px dashed rgba(155,111,212,.35);background:rgba(155,111,212,.05);color:var(--mist)}
+.book-toolbar .actions{display:flex;gap:.6rem;flex-wrap:wrap}.book-frame{width:100%;height:calc(100vh - 260px);min-height:620px;border:1px solid var(--border);background:#111}.book-fallback{padding:1rem;border:1px dashed rgba(155,111,212,.35);background:rgba(155,111,212,.05);color:var(--mist)}.file-path{word-break:break-all}
 @media(max-width:800px){.book-frame{height:75vh;min-height:480px}.book-toolbar{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
@@ -22,16 +22,41 @@
   <div class="sidebar-divider requires-auth">Ferramentas</div><a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a><a class="requires-auth" href="mercado.html">Mercado</a><a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside>
 <section><div class="container">
-  <p class="eyebrow">Premium</p><h1>Livro do Sistema</h1>
-  <p class="subtitle">Abra o sistema diretamente no navegador ou baixe o PDF para usar offline.</p>
+  <p class="eyebrow">Premium</p><h1 id="bookTitle">Livro do Sistema</h1>
+  <p class="subtitle">Visualização interna do site. O jogador pode ler aqui mesmo ou baixar o PDF.</p>
   <div class="book-toolbar">
-    <div><strong>Crônicas do Éter — Mesa 7</strong><br><span class="sheet-muted">Arquivo local: downloads/cronicas-do-eter-mesa-7.pdf</span></div>
-    <div class="actions"><a class="btn-primary" href="downloads/cronicas-do-eter-mesa-7.pdf" download>Baixar PDF</a><a class="btn-secondary" href="sistema-download.html">Voltar aos downloads</a></div>
+    <div><strong id="bookName">Crônicas do Éter — Mesa 7</strong><br><span class="sheet-muted file-path" id="bookMeta">Arquivo local: downloads/cronicas-do-eter-mesa-7.pdf</span></div>
+    <div class="actions"><a id="downloadBtn" class="btn-primary" href="downloads/cronicas-do-eter-mesa-7.pdf" download>Baixar PDF</a><a class="btn-secondary" href="sistema-download.html">Voltar aos downloads</a></div>
   </div>
-  <object class="book-frame" data="downloads/cronicas-do-eter-mesa-7.pdf" type="application/pdf">
-    <div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Use o botão <b>Baixar PDF</b> acima ou abra diretamente: <a href="downloads/cronicas-do-eter-mesa-7.pdf">downloads/cronicas-do-eter-mesa-7.pdf</a>.</div>
+  <object id="bookObject" class="book-frame" data="downloads/cronicas-do-eter-mesa-7.pdf" type="application/pdf">
+    <div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Use o botão <b>Baixar PDF</b> acima.</div>
   </object>
 </div></section>
 <footer>Crônicas do Éter — Portal do Jogador</footer>
 <script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script>
+<script>
+(function(){
+  const params=new URLSearchParams(location.search);
+  const DEFAULT_FILE='downloads/cronicas-do-eter-mesa-7.pdf';
+  function safeFile(value){
+    let file=String(value||DEFAULT_FILE).trim();
+    if(!file) file=DEFAULT_FILE;
+    if(/^javascript:/i.test(file) || /^data:/i.test(file)) return DEFAULT_FILE;
+    file=file.replace(/^\/+/, '');
+    if(!/^https?:\/\//i.test(file)) file=file.replace(/\.\./g,'');
+    file=file.replace(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i,'https://raw.githubusercontent.com/$1/$2/$3/$4');
+    return file;
+  }
+  function escText(v){return String(v||'').replace(/[<>]/g,'');}
+  const file=safeFile(params.get('file'));
+  const title=escText(params.get('title')) || 'Crônicas do Éter — Mesa 7';
+  const version=escText(params.get('version'));
+  document.title=title+' — Crônicas do Éter';
+  document.getElementById('bookTitle').textContent=title;
+  document.getElementById('bookName').textContent=title;
+  document.getElementById('bookMeta').textContent=(version?`Versão: ${version} • `:'')+`Arquivo: ${file}`;
+  document.getElementById('downloadBtn').href=file;
+  document.getElementById('bookObject').data=file;
+})();
+</script>
 </body></html>
