@@ -3,69 +3,20 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Livro do Sistema — Crônicas do Éter</title>
+<title>Visualizador — Crônicas do Éter</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
 <link href="styles.css" rel="stylesheet"/>
 <style>
-.book-toolbar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:1rem 0 1.2rem;padding:1rem;background:var(--surface);border:1px solid var(--border)}
-.book-toolbar .actions{display:flex;gap:.6rem;flex-wrap:wrap}.book-frame{width:100%;height:calc(100vh - 260px);min-height:620px;border:1px solid var(--border);background:#111}.book-fallback{padding:1rem;border:1px dashed rgba(155,111,212,.35);background:rgba(155,111,212,.05);color:var(--mist)}.file-path{word-break:break-all}
-@media(max-width:800px){.book-frame{height:75vh;min-height:480px}.book-toolbar{align-items:flex-start;flex-direction:column}}
+.book-toolbar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:1rem 0 1.2rem;padding:1rem;background:var(--surface);border:1px solid var(--border)}.book-toolbar .actions{display:flex;gap:.6rem;flex-wrap:wrap}.book-frame{width:100%;height:calc(100vh - 260px);min-height:620px;border:1px solid var(--border);background:#111}.book-fallback{padding:1rem;border:1px dashed rgba(155,111,212,.35);background:rgba(155,111,212,.05);color:var(--mist)}@media(max-width:800px){.book-frame{height:75vh;min-height:480px}.book-toolbar{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
 <nav class="topbar"><button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button><a class="nav-brand" href="index.html">Crônicas do Éter</a></nav>
-<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar">
-  <div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div>
-  <a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a>
-  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
-  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a><a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a><a class="requires-auth" href="meus-familiares.html">Meus Familiares</a><a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a><a class="active requires-auth" href="sistema-download.html">Download do Sistema</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
-  <div class="sidebar-divider requires-auth">Ferramentas</div><a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a><a class="requires-auth" href="mercado.html">Mercado</a><a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
-</aside>
-<section><div class="container">
-  <p class="eyebrow">Premium</p><h1 id="bookTitle">Livro do Sistema</h1>
-  <p class="subtitle">Visualização interna do site. O jogador pode ler o sistema aqui mesmo, sem sair do portal.</p>
-  <div class="book-toolbar">
-    <div><strong id="bookName">Crônicas do Éter — Mesa 7</strong><br><span class="sheet-muted file-path" id="bookMeta">Versão local disponível</span></div>
-    <div class="actions"><a class="btn-secondary" href="sistema-download.html">Voltar aos downloads</a></div>
-  </div>
-  <object id="bookObject" class="book-frame" data="downloads/cronicas-do-eter-mesa-7.pdf" type="application/pdf">
-    <div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Volte aos downloads e tente visualizar novamente pelo portal.</div>
-  </object>
-</div></section>
+<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar"><div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div><a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a><div class="sidebar-divider requires-auth">Conteúdo Premium</div><a class="active requires-auth" href="sistema-download.html">Arquivos</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a></aside>
+<section><div class="container"><p class="eyebrow">Premium</p><h1 id="bookTitle">Visualizador</h1><p class="subtitle">Visualização interna do portal.</p><div class="book-toolbar"><div><strong id="bookName">Arquivo</strong><br><span class="sheet-muted" id="bookMeta">Carregando...</span></div><div class="actions"><a class="btn-secondary" href="sistema-download.html">Voltar</a><a class="btn-primary" id="downloadBtn" href="#" download>Baixar</a></div></div><object id="bookObject" class="book-frame" data="" type="application/pdf"><div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Use o botão baixar ou confira se o arquivo existe.</div></object></div></section>
 <footer>Crônicas do Éter — Portal do Jogador</footer>
 <script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script>
 <script>
-(function(){
-  const params=new URLSearchParams(location.search);
-  // O endereço do arquivo fica apenas internamente no código/URL da página.
-  // Ele não é exibido na interface do jogador.
-  const DEFAULT_FILE='downloads/cronicas-do-eter-mesa-7.pdf';
-  function toRawGitHub(url){
-    return String(url||'')
-      .replace(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i,'https://raw.githubusercontent.com/$1/$2/$3/$4')
-      .replace(/^https:\/\/raw\.githubusercontent\.com\//i,'https://raw.githubusercontent.com/');
-  }
-  function safeFile(value){
-    let file=String(value||DEFAULT_FILE).trim();
-    if(!file) file=DEFAULT_FILE;
-    if(/^javascript:/i.test(file) || /^data:/i.test(file)) return DEFAULT_FILE;
-    file=toRawGitHub(file);
-    if(!/^https?:\/\//i.test(file)){
-      file=file.replace(/^\/+/, '').replace(/\.\./g,'');
-    }
-    return file;
-  }
-  function escText(v){return String(v||'').replace(/[<>]/g,'');}
-  const file=safeFile(params.get('file'));
-  const title=escText(params.get('title')) || 'Crônicas do Éter — Mesa 7';
-  const version=escText(params.get('version'));
-  document.title=title+' — Crônicas do Éter';
-  document.getElementById('bookTitle').textContent=title;
-  document.getElementById('bookName').textContent=title;
-  document.getElementById('bookMeta').textContent=version?`Versão: ${version}`:'Visualização interna do sistema';
-  document.getElementById('bookObject').data=encodeURI(file);
-  const obj=document.getElementById('bookObject');
-  obj.innerHTML='<div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Verifique se o arquivo existe na pasta downloads e se o nome está correto.</div>';
-})();
+(function(){const params=new URLSearchParams(location.search);const DEFAULT_FILE='downloads/cronicas-do-eter-mesa-7.pdf';function toRawGitHub(url){return String(url||'').replace(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i,'https://raw.githubusercontent.com/$1/$2/$3/$4').replace(/^https:\/\/raw\.githubusercontent\.com\//i,'https://raw.githubusercontent.com/');}function safeFile(value){let file=String(value||DEFAULT_FILE).trim();if(!file)file=DEFAULT_FILE;if(/^javascript:/i.test(file)||/^data:/i.test(file))return DEFAULT_FILE;file=toRawGitHub(file);if(!/^https?:\/\//i.test(file)){file=file.replace(/^\/+/, '').replace(/\.\./g,'');}return file;}function clean(v){return String(v||'').replace(/[<>]/g,'');}const file=safeFile(params.get('file'));const title=clean(params.get('title'))||'Arquivo';const version=clean(params.get('version'));document.title=title+' — Crônicas do Éter';document.getElementById('bookTitle').textContent=title;document.getElementById('bookName').textContent=title;document.getElementById('bookMeta').textContent=version?`Versão: ${version}`:'Visualização interna';document.getElementById('bookObject').data=encodeURI(file);const dl=document.getElementById('downloadBtn');dl.href=encodeURI(file);dl.setAttribute('download',(title||'arquivo')+'.pdf');})();
 </script>
 </body></html>

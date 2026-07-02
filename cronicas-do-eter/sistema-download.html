@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Download do Sistema — Crônicas do Éter</title>
+<title>Arquivos — Crônicas do Éter</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
 <link href="styles.css" rel="stylesheet"/>
 <style>
-.download-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;align-items:start}.download-panel{background:var(--surface);border:1px solid var(--border);padding:1.3rem}.download-panel h3,.download-card h4{font-family:'Cinzel',serif;color:var(--ether-pale);letter-spacing:.06em;text-transform:uppercase}.download-form{display:grid;gap:.75rem}.download-form label{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--silver-dim)}.download-form input,.download-form textarea,.download-form select{width:100%;background:rgba(255,255,255,.035);border:1px solid var(--border);color:var(--text);padding:.7rem .8rem;font-family:inherit}.download-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:.8rem}.download-list{display:grid;gap:1rem}.download-card{border:1px solid rgba(155,111,212,.22);background:rgba(10,9,16,.6);padding:1rem}.download-card p{color:var(--mist);line-height:1.55}.download-meta{font-size:.85rem;color:var(--text-dim)}.download-empty{border:1px dashed rgba(155,111,212,.35);padding:1.2rem;color:var(--mist);background:rgba(155,111,212,.04)}.admin-only{display:none}.is-admin .admin-only{display:block}.is-admin .admin-only.download-actions{display:flex}@media(max-width:900px){.download-grid{grid-template-columns:1fr}}
+.files-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-end;margin-bottom:1.2rem}.files-actions{display:flex;gap:.7rem;flex-wrap:wrap}.download-list{display:grid;gap:1rem}.download-card{border:1px solid rgba(155,111,212,.25);background:rgba(10,9,16,.62);padding:1.15rem}.download-card h4{font-family:'Cinzel',serif;color:var(--ether-pale);letter-spacing:.06em;text-transform:uppercase;margin:0 0 .35rem}.download-card p{color:var(--mist);line-height:1.55}.download-meta{font-size:.88rem;color:var(--text-dim)}.download-empty{border:1px dashed rgba(155,111,212,.35);padding:1.2rem;color:var(--mist);background:rgba(155,111,212,.04)}.download-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:.95rem}.category-filter{display:flex;gap:.55rem;flex-wrap:wrap;margin:0 0 1rem}.category-filter button{border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--mist);padding:.55rem .8rem;font-family:'Cinzel',serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}.category-filter button.active{background:linear-gradient(135deg,var(--ether),var(--ether-2));color:#fff}.admin-only{display:none}.is-admin .admin-only{display:inline-flex}@media(max-width:800px){.files-head{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
@@ -16,56 +16,29 @@
   <div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div>
   <a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a>
   <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
-  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a><a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a><a class="requires-auth" href="meus-familiares.html">Meus Familiares</a><a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a><a class="active requires-auth" href="sistema-download.html">Download do Sistema</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a><a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a><a class="requires-auth" href="meus-familiares.html">Meus Familiares</a><a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a><a class="active requires-auth" href="sistema-download.html">Arquivos</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
   <div class="sidebar-divider requires-auth">Ferramentas</div><a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a><a class="requires-auth" href="mercado.html">Mercado</a><a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
 </aside>
 <section><div class="container">
-  <p class="eyebrow">Premium</p><h1>Download do Sistema</h1>
-  <p class="subtitle">Área para acessar o livro do sistema dentro do próprio site, sem exibir o endereço do arquivo ao jogador.</p>
+  <div class="files-head"><div><p class="eyebrow">Premium</p><h1>Arquivos disponíveis</h1><p class="subtitle">Visualize e baixe arquivos dentro do portal. O endereço interno do arquivo não aparece escrito para os jogadores.</p></div><div class="files-actions"><a class="btn-primary admin-only" href="gerenciador-arquivos.html">Gerenciar arquivos</a></div></div>
   <div id="downloadAccessBox" class="download-empty">Verificando acesso...</div>
-  <div id="downloadApp" style="display:none">
-    <div class="admin-only download-panel reveal" style="margin-bottom:1.2rem"><h3>Admin/Mestre — cadastrar download</h3><form id="downloadForm" class="download-form"><label>Título</label><input id="downloadTitle" placeholder="Ex.: Crônicas do Éter — Livro do Sistema" required><label>Versão</label><input id="downloadVersion" placeholder="Ex.: v1.0, Sprint 60, Junho/2026"><label>Link direto do arquivo</label><input id="downloadFileUrl" placeholder="Ex.: https://seusite.com/downloads/sistema.pdf ou https://raw.githubusercontent.com/.../sistema.pdf"><p class="sheet-muted">Cole aqui o link completo do arquivo. Esse endereço será usado internamente e não será exibido para os jogadores. Se preferir usar um arquivo dentro da pasta <b>downloads</b> do próprio site, deixe o link vazio e preencha apenas o campo abaixo.</p><label>Nome do arquivo na pasta downloads (opcional)</label><input id="downloadFileName" placeholder="Ex.: sistema.pdf"><p class="sheet-muted">Use este campo apenas se o arquivo estiver em <b>/downloads</b>. O site criará automaticamente o caminho <b>downloads/nome-do-arquivo</b>.</p><label>Descrição</label><textarea id="downloadDescription" rows="4" placeholder="Explique o que vem neste arquivo"></textarea><button class="btn-primary" type="submit">Publicar download</button><p id="downloadMsg" class="sheet-muted"></p></form></div>
-    <div class="download-panel reveal"><h3>Arquivos disponíveis</h3><div id="downloadsList" class="download-list"><div class="download-empty">Carregando arquivos...</div></div></div>
-  </div>
+  <div id="downloadApp" style="display:none"><div id="categoryFilter" class="category-filter"></div><div id="downloadsList" class="download-list"><div class="download-empty">Carregando arquivos...</div></div></div>
 </div></section>
 <footer>Crônicas do Éter — Portal do Jogador</footer>
 <script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script>
 <script type="module">
-import { watchAuth, hasApprovedAccess, saveSystemDownload, listSystemDownloads, updateSystemDownload, deleteSystemDownload } from './auth-service.js';
-const $=id=>document.getElementById(id); let isAdmin=false; let downloads=[]; let availableFiles=[];
-const defaultDownloads=[];
+import { watchAuth, hasApprovedAccess, listSystemDownloads } from './auth-service.js';
+const $=id=>document.getElementById(id);let profile=null;let activeCategory='todos';let rows=[];
+const CATS={sistema:'Sistema',mapas:'Mapas',aventuras:'Aventuras',tokens:'Tokens',personagens:'Personagens',outros:'Outros'};
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function isAdmin(){return profile&&(profile.role==='admin'||profile.role==='master');}
+function allowed(p){return hasApprovedAccess(p)&&(p.premium===true||['admin','master','player'].includes(p.role));}
 function cleanFileName(v){return String(v||'').trim().replace(/^\/+/, '').replace(/^downloads\//i,'').replace(/\.\./g,'');}
-function cleanUrl(v){return String(v||'').trim();}
-function githubDownloadUrl(fileName){const safe=cleanFileName(fileName); return safe ? `downloads/${encodeURIComponent(safe).replace(/%2F/g,'/')}` : '#';}
-function fileLabel(d){return d.fileName || d.fileUrl || 'arquivo';}
-function normalizeDownloadHref(url,fileName){
-  const direct=cleanUrl(url);
-  if(direct) return direct;
-  return githubDownloadUrl(fileName);
-}
-function viewerUrl(d){
-  const file=normalizeDownloadHref(d.fileUrl,d.fileName);
-  const params=new URLSearchParams();
-  params.set('file', file);
-  if(d.title) params.set('title', d.title);
-  if(d.version) params.set('version', d.version);
-  return `sistema-livro.html?${params.toString()}`;
-}
-
-function allowed(profile){return hasApprovedAccess(profile)&&(profile.premium===true||profile.role==='admin'||profile.role==='master'||profile.role==='player');}
-function mergeDownloads(){
-  const seen=new Set();
-  return [...defaultDownloads,...downloads].filter(d=>{
-    const key=(d.fileUrl||d.fileName||d.title||'').toLowerCase();
-    if(seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-function render(){const visible=mergeDownloads().filter(d=>isAdmin||d.visible!==false); $('downloadsList').innerHTML=visible.length?visible.map(d=>{const viewHref=viewerUrl(d);return `<article class="download-card" data-file-url="${esc(normalizeDownloadHref(d.fileUrl,d.fileName))}"><h4>${esc(d.title||'Sistema Crônicas do Éter')}</h4><p class="download-meta">${d.version?`Versão: ${esc(d.version)}`:'Versão não informada'}${d.visible===false?' • Oculto':''}</p>${d.description?`<p>${esc(d.description)}</p>`:''}<div class="download-actions"><a class="btn-primary" href="${esc(viewHref)}" target="_blank" rel="noopener">Visualizar no site</a>${isAdmin&&!d.local?`<button class="btn-secondary toggle-download" data-id="${esc(d.id)}" data-visible="${d.visible!==false}" type="button">${d.visible===false?'Mostrar':'Ocultar'}</button><button class="btn-secondary delete-download" data-id="${esc(d.id)}" type="button">Excluir</button>`:''}</div></article>`}).join(''):'<div class="download-empty">Nenhum arquivo disponível ainda.</div>'; if(isAdmin){document.querySelectorAll('.toggle-download').forEach(b=>b.onclick=async()=>{await updateSystemDownload(b.dataset.id,{visible:!(b.dataset.visible==='true')}); await load();});document.querySelectorAll('.delete-download').forEach(b=>b.onclick=async()=>{if(!confirm('Excluir este download?'))return; await deleteSystemDownload(b.dataset.id); await load();});}}
-async function load(){downloads=await listSystemDownloads(); render();}
-$('downloadForm')?.addEventListener('submit',async e=>{e.preventDefault(); $('downloadMsg').textContent='Salvando...'; try{const fileUrl=cleanUrl($('downloadFileUrl')?.value); const fileName=cleanFileName($('downloadFileName').value); if(!fileUrl&&!fileName) throw new Error('Informe o link direto do arquivo ou o nome do arquivo dentro da pasta downloads.'); await saveSystemDownload({title:$('downloadTitle').value,version:$('downloadVersion').value,fileUrl:normalizeDownloadHref(fileUrl,fileName),fileName:fileName||fileUrl,filePath:fileName?`downloads/${fileName}`:fileUrl,description:$('downloadDescription').value}); e.target.reset(); $('downloadMsg').textContent='Download publicado.'; await load();}catch(err){$('downloadMsg').textContent=err.message||'Erro ao publicar download.';}});
-watchAuth(async({profile})=>{if(!allowed(profile)){ $('downloadAccessBox').textContent='Acesso restrito a contas premium aprovadas.'; return;} isAdmin=(profile.role==='admin'||profile.role==='master'); document.body.classList.toggle('is-admin',isAdmin); $('downloadAccessBox').style.display='none'; $('downloadApp').style.display='block'; try{await load();}catch(err){$('downloadsList').innerHTML=`<div class="download-empty">${esc(err.message)}</div>`;}});
+function normalizeDownloadHref(d){const direct=String(d.fileUrl||'').trim();if(direct)return direct;const f=cleanFileName(d.fileName||d.filePath);return f?`downloads/${encodeURIComponent(f).replace(/%2F/g,'/')}`:'#';}
+function viewerUrl(d){const params=new URLSearchParams();params.set('file',normalizeDownloadHref(d));params.set('title',d.title||'Arquivo');if(d.version)params.set('version',d.version);return `sistema-livro.html?${params.toString()}`;}
+function categoryOf(d){return d.category||d.categoria||'sistema';}
+function renderFilters(list){const cats=['todos',...Array.from(new Set(list.map(categoryOf)))];$('categoryFilter').innerHTML=cats.map(c=>`<button type="button" class="${activeCategory===c?'active':''}" data-cat="${esc(c)}">${c==='todos'?'Todos':esc(CATS[c]||c)}</button>`).join('');document.querySelectorAll('#categoryFilter button').forEach(b=>b.onclick=()=>{activeCategory=b.dataset.cat;render();});}
+function render(){const visible=rows.filter(d=>isAdmin()||d.visible!==false).filter(d=>activeCategory==='todos'||categoryOf(d)===activeCategory);renderFilters(rows.filter(d=>isAdmin()||d.visible!==false));$('downloadsList').innerHTML=visible.length?visible.map(d=>`<article class="download-card"><h4>${esc(d.title||'Arquivo')}</h4><p class="download-meta">${esc(CATS[categoryOf(d)]||categoryOf(d))}${d.version?' • Versão: '+esc(d.version):''}${d.visible===false?' • Oculto':''}</p>${d.description?`<p>${esc(d.description)}</p>`:''}<div class="download-actions"><a class="btn-primary" href="${esc(viewerUrl(d))}" target="_blank" rel="noopener">Visualizar no site</a><a class="btn-secondary" href="${esc(normalizeDownloadHref(d))}" download>Baixar</a></div></article>`).join(''):'<div class="download-empty">Nenhum arquivo disponível nesta categoria.</div>';}
+watchAuth(async({profile:p})=>{profile=p;if(!allowed(profile)){$('downloadAccessBox').textContent='Acesso restrito a contas premium aprovadas.';return;}document.body.classList.toggle('is-admin',isAdmin());$('downloadAccessBox').style.display='none';$('downloadApp').style.display='block';try{rows=await listSystemDownloads();rows.sort((a,b)=>String(b.createdAt?.seconds||0).localeCompare(String(a.createdAt?.seconds||0)));render();}catch(err){$('downloadsList').innerHTML=`<div class="download-empty">${esc(err.message||'Erro ao carregar arquivos.')}</div>`;}});
 </script>
 </body></html>
