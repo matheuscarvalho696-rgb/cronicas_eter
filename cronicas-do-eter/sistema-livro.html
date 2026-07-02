@@ -23,13 +23,13 @@
 </aside>
 <section><div class="container">
   <p class="eyebrow">Premium</p><h1 id="bookTitle">Livro do Sistema</h1>
-  <p class="subtitle">Visualização interna do site. O jogador pode ler aqui mesmo ou baixar o PDF.</p>
+  <p class="subtitle">Visualização interna do site. O jogador lê o sistema sem sair do portal.</p>
   <div class="book-toolbar">
-    <div><strong id="bookName">Crônicas do Éter — Mesa 7</strong><br><span class="sheet-muted file-path" id="bookMeta">Arquivo local: downloads/cronicas-do-eter-mesa-7.pdf</span></div>
-    <div class="actions"><a id="downloadBtn" class="btn-primary" href="downloads/cronicas-do-eter-mesa-7.pdf" download>Baixar PDF</a><a class="btn-secondary" href="sistema-download.html">Voltar aos downloads</a></div>
+    <div><strong id="bookName">Crônicas do Éter — Mesa 7</strong><br><span class="sheet-muted file-path" id="bookMeta"></span></div>
+    <div class="actions"><a class="btn-secondary" href="sistema-download.html">Voltar aos downloads</a></div>
   </div>
   <object id="bookObject" class="book-frame" data="downloads/cronicas-do-eter-mesa-7.pdf" type="application/pdf">
-    <div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Use o botão <b>Baixar PDF</b> acima.</div>
+    <div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Volte à página de downloads e confirme se o arquivo foi enviado para a pasta correta.</div>
   </object>
 </div></section>
 <footer>Crônicas do Éter — Portal do Jogador</footer>
@@ -42,9 +42,12 @@
     let file=String(value||DEFAULT_FILE).trim();
     if(!file) file=DEFAULT_FILE;
     if(/^javascript:/i.test(file) || /^data:/i.test(file)) return DEFAULT_FILE;
+    const githubMatch=file.match(/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/(?:.*\/)?([^\/?#]+)/i);
+    const rawMatch=file.match(/raw\.githubusercontent\.com\/[^\/]+\/[^\/]+\/[^\/]+\/(?:.*\/)?([^\/?#]+)/i);
+    const name=(githubMatch&&githubMatch[1])||(rawMatch&&rawMatch[1]);
+    if(name) return 'downloads/'+encodeURIComponent(decodeURIComponent(name));
     file=file.replace(/^\/+/, '');
     if(!/^https?:\/\//i.test(file)) file=file.replace(/\.\./g,'');
-    file=file.replace(/^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/i,'https://raw.githubusercontent.com/$1/$2/$3/$4');
     return file;
   }
   function escText(v){return String(v||'').replace(/[<>]/g,'');}
@@ -54,8 +57,7 @@
   document.title=title+' — Crônicas do Éter';
   document.getElementById('bookTitle').textContent=title;
   document.getElementById('bookName').textContent=title;
-  document.getElementById('bookMeta').textContent=(version?`Versão: ${version} • `:'')+`Arquivo: ${file}`;
-  document.getElementById('downloadBtn').href=file;
+  document.getElementById('bookMeta').textContent=version?`Versão: ${version}`:'';
   document.getElementById('bookObject').data=file;
 })();
 </script>
