@@ -63,7 +63,9 @@
   document.getElementById('bookTitle').textContent=title;
   document.getElementById('bookName').textContent=title;
   document.getElementById('bookMeta').textContent=version?`Versão: ${version}`:'Visualização interna do sistema';
-  document.getElementById('bookObject').data=file;
+  document.getElementById('bookObject').data=encodeURI(file);
+  const obj=document.getElementById('bookObject');
+  obj.innerHTML='<div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Verifique se o arquivo existe na pasta downloads e se o nome está correto.</div>';
 })();
 </script>
 </body></html>

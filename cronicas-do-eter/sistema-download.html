@@ -33,16 +33,7 @@
 <script type="module">
 import { watchAuth, hasApprovedAccess, saveSystemDownload, listSystemDownloads, updateSystemDownload, deleteSystemDownload } from './auth-service.js';
 const $=id=>document.getElementById(id); let isAdmin=false; let downloads=[]; let availableFiles=[];
-const defaultDownloads=[{
-  id:'livro-sistema-local',
-  title:'Crônicas do Éter — Livro do Sistema',
-  version:'Mesa 7',
-  fileUrl:'downloads/cronicas-do-eter-mesa-7.pdf',
-  fileName:'cronicas-do-eter-mesa-7.pdf',
-  description:'Livro do sistema disponível para visualização interna no portal.',
-  visible:true,
-  local:true
-}];
+const defaultDownloads=[];
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function cleanFileName(v){return String(v||'').trim().replace(/^\/+/, '').replace(/^downloads\//i,'').replace(/\.\./g,'');}
 function cleanUrl(v){return String(v||'').trim();}
