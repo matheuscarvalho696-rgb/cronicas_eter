@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Livro do Sistema — Crônicas do Éter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet"/>
+<link href="styles.css" rel="stylesheet"/>
+<style>
+.book-toolbar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:1rem 0 1.2rem;padding:1rem;background:var(--surface);border:1px solid var(--border)}
+.book-toolbar .actions{display:flex;gap:.6rem;flex-wrap:wrap}.book-frame{width:100%;height:calc(100vh - 260px);min-height:620px;border:1px solid var(--border);background:#111}.book-fallback{padding:1rem;border:1px dashed rgba(155,111,212,.35);background:rgba(155,111,212,.05);color:var(--mist)}
+@media(max-width:800px){.book-frame{height:75vh;min-height:480px}.book-toolbar{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<nav class="topbar"><button aria-label="Abrir menu" class="nav-toggle sidebar-toggle" type="button">☰</button><a class="nav-brand" href="index.html">Crônicas do Éter</a></nav>
+<aside aria-label="Menu lateral" class="sidebar" id="siteSidebar">
+  <div class="sidebar-head"><div class="sidebar-title">Compêndio</div><button aria-label="Fechar menu" class="sidebar-close" type="button">×</button></div>
+  <a href="index.html">Início</a><a href="racas.html">Raças</a><a href="classes.html">Classes</a><a href="especializacoes.html">Especializações</a><a href="talentos.html">Talentos</a><a href="crie-personagem.html">Crie seu Personagem</a><a href="habilidades.html">Habilidades</a><a href="familiar.html">Familiar</a><a href="divindades.html">Divindades</a>
+  <div class="sidebar-divider requires-auth">Conteúdo Premium</div>
+  <a class="requires-auth" href="meus-personagens.html">Meus Personagens</a><a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a><a class="requires-auth" href="meus-familiares.html">Meus Familiares</a><a class="requires-auth" href="roll20-mesas.html">Mesas Roll20</a><a class="active requires-auth" href="sistema-download.html">Download do Sistema</a><a class="requires-auth" href="chatbot.html">Assistente do Sistema</a>
+  <div class="sidebar-divider requires-auth">Ferramentas</div><a class="requires-auth" href="calculadora.html">Calculadora XP/PT</a><a class="requires-auth" href="mercado.html">Mercado</a><a class="requires-auth" href="criacao-equipamentos.html">Criação de Equipamentos</a>
+</aside>
+<section><div class="container">
+  <p class="eyebrow">Premium</p><h1>Livro do Sistema</h1>
+  <p class="subtitle">Abra o sistema diretamente no navegador ou baixe o PDF para usar offline.</p>
+  <div class="book-toolbar">
+    <div><strong>Crônicas do Éter — Mesa 7</strong><br><span class="sheet-muted">Arquivo local: downloads/cronicas-do-eter-mesa-7.pdf</span></div>
+    <div class="actions"><a class="btn-primary" href="downloads/cronicas-do-eter-mesa-7.pdf" download>Baixar PDF</a><a class="btn-secondary" href="sistema-download.html">Voltar aos downloads</a></div>
+  </div>
+  <object class="book-frame" data="downloads/cronicas-do-eter-mesa-7.pdf" type="application/pdf">
+    <div class="book-fallback">Seu navegador não conseguiu abrir o PDF embutido. Use o botão <b>Baixar PDF</b> acima ou abra diretamente: <a href="downloads/cronicas-do-eter-mesa-7.pdf">downloads/cronicas-do-eter-mesa-7.pdf</a>.</div>
+  </object>
+</div></section>
+<footer>Crônicas do Éter — Portal do Jogador</footer>
+<script src="script.js"></script><script type="module" src="auth-widget.js"></script><script type="module" src="auth-guard.js"></script>
+</body></html>
