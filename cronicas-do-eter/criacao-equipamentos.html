@@ -31,6 +31,12 @@ table.material-table{width:100%;border-collapse:collapse;min-width:760px;font-si
 .material-table th,.material-table td{border-bottom:1px solid var(--border);padding:.65rem .75rem;text-align:left;vertical-align:top}
 .material-table th{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ether-glow);background:rgba(155,111,212,.08)}
 @media(max-width:980px){.craft-wrap{grid-template-columns:1fr}.craft-sticky{position:static}.craft-grid{grid-template-columns:1fr}}
+
+/* v86 — controles de minério especial */
+.ingredient-choice{display:flex!important;align-items:center;gap:.7rem;padding:.85rem 1rem;border:1px solid var(--border);border-radius:8px;background:rgba(155,111,212,.06);cursor:pointer}.ingredient-choice:hover{border-color:var(--ether-glow);background:rgba(155,111,212,.11)}.ingredient-choice input{width:20px!important;height:20px;accent-color:var(--ether-glow);flex:0 0 auto}
+#specialOreFields{padding:1rem;border:1px solid var(--ether-glow);border-radius:8px;background:rgba(155,111,212,.08);grid-template-columns:minmax(0,1fr) 180px;gap:1rem;align-items:end}#specialOreFields label:first-child,#specialOreFields textarea{grid-column:1/-1}#specialOreEffects{width:100%;min-height:120px;resize:vertical;box-sizing:border-box;background:var(--void);border:1px solid var(--border);border-radius:6px;color:var(--silver-bright);padding:.75rem;font-family:'Crimson Text',serif;font-size:1rem;line-height:1.45}#specialOreEffects:focus{outline:none;border-color:var(--ether-glow);box-shadow:0 0 0 3px rgba(155,111,212,.13)}
+@media(max-width:720px){#specialOreFields{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body><nav class="topbar">
