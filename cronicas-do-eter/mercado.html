@@ -60,6 +60,16 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 
 @media (max-width: 980px){ .market-wrap{grid-template-columns:1fr;} .market-sticky{position:static;} .market-tools{grid-template-columns:1fr;} }
 .potion-ingredients{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.45rem;max-height:520px;overflow:auto}.ingredient-choice{border:1px solid var(--border);padding:.5rem;color:var(--mist)} .market-table{min-width:1250px!important} @media(max-width:700px){.market-table{min-width:1100px!important}.market-tabs{overflow-x:auto;flex-wrap:nowrap}.market-tab{white-space:nowrap}}
+
+/* v86 — mercado responsivo e sem rolagem horizontal excessiva */
+.market-wrap{grid-template-columns:minmax(0,1fr) 300px;gap:1rem}.market-panel{padding:1rem;border-radius:10px}.market-tools{position:sticky;top:58px;z-index:4;background:var(--surface);padding:.65rem;margin:-.25rem -.25rem .8rem;border-bottom:1px solid var(--border)}
+.market-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.45rem}.market-tab{min-height:42px;padding:.55rem .65rem}.market-section{border:1px solid var(--border);border-radius:8px;overflow:hidden}.market-section h3{padding:.75rem .85rem;margin:0;background:rgba(155,111,212,.08)}
+.market-table-wrap{overflow:visible;border:0}.market-table{min-width:0!important;table-layout:fixed}.market-table th,.market-table td{padding:.55rem .6rem;word-break:break-word}.market-table th:nth-child(1),.market-table td:nth-child(1){width:58px}.market-table th:nth-child(2),.market-table td:nth-child(2){width:68px}.market-table th:nth-child(3),.market-table td:nth-child(3){width:18%}.market-table th:nth-last-child(2),.market-table td:nth-last-child(2){width:95px}.market-table th:last-child,.market-table td:last-child{width:auto}.qty-input{min-width:54px;padding:.45rem}
+.non-equipment-table [data-field="Acerto"],.non-equipment-table [data-field="CAF"],.non-equipment-table [data-field="CAR"],.non-equipment-table [data-field="Dano"],.non-equipment-table [data-field="Resistência"],.non-equipment-table th.stat-column{display:none}
+.potion-builder,.service-builder{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:1rem;align-items:start}.potion-toolbar,.service-inputs{display:grid;grid-template-columns:1fr auto;gap:.6rem}.service-inputs{grid-template-columns:repeat(3,1fr)}.market-btn.compact{width:auto;margin:0;padding:.55rem .75rem}.ingredient-choice{display:grid;grid-template-columns:auto 1fr auto;gap:.55rem;align-items:center;border-radius:6px}.ingredient-choice small{color:var(--rune-bright)}.total-highlight{margin-top:.6rem;padding:.65rem;background:rgba(155,111,212,.1);border:1px solid var(--ether-glow)}
+@media(max-width:1100px){.market-wrap{grid-template-columns:1fr}.market-sticky{position:static;max-height:none}.potion-builder,.service-builder{grid-template-columns:1fr}}
+@media(max-width:760px){.market-tools{position:static;grid-template-columns:1fr}.market-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap}.market-tab{min-width:145px}.market-table,.market-table tbody,.market-table tr,.market-table td{display:block;width:100%!important}.market-table thead{display:none}.market-table tr{padding:.65rem;border-bottom:1px solid var(--border)}.market-table td{border:0;padding:.3rem .35rem}.market-table td::before{content:attr(data-field);display:inline-block;min-width:105px;color:var(--ether-pale);font-family:'Cinzel',serif;font-size:.62rem;text-transform:uppercase}.market-table td:first-child,.market-table td:nth-child(2){display:inline-block;width:48%!important}.market-table td:first-child::before{content:'Selecionar'}.market-table td:nth-child(2)::before{content:'Quantidade'}.service-inputs,.potion-toolbar{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body><nav class="topbar">
@@ -3745,7 +3755,7 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 <a class="requires-auth" href="minhas-distribuicoes.html">Minhas Distribuições</a><a class="requires-auth" href="mercado.html">Mercado</a></div></footer>
 <script src="script.js"></script>
 <script>
-const groupOrder = ["Equipamentos","Ferreiro","Runas","Criação de Equipamentos","Poções","Criar Poções","Mercado Geral","Serviços","Alimentação","Animais","Bens e Posses"];
+const groupOrder = ["Equipamentos","Ferreiro","Runas","Poções","Criar Poções","Mercado Geral","Serviços","Alimentação","Animais","Bens e Posses"];
 const subcats = {"Comércio de Armas": ["Armas Simples (Corpo a Corpo)", "Armas Simples (Distância)", "Armas Marciais (Corpo a Corpo)", "Armas Marciais (Distância)", "Armas Exóticas (Corpo a Corpo)", "Armas Exóticas (Distância)", "Símbolos Sagrados", "Foco Arcano", "Instrumentos Musicais"], "Comércio de Armaduras": ["Vestes", "Armaduras Leves", "Armaduras Médias", "Armaduras Pesadas"], "Equipamentos Extras": ["Escudos", "Anéis", "Colares", "Itens Adicionais", "Munições, Flechas e Virotes"], "Modificação de Equipamentos": ["Reforjas", "Conjuntos", "Encantamentos", "Reparo de Equipamentos", "Runas"], "Criação, Fundição e Poções": ["Mineração e Fundição de Minérios", "Poções", "Componentes e Receitas de Poções"], "Mercado Geral": ["Ferramentas e Utilidades", "Acampamento e Sobrevivência", "Vestuário e Acessórios", "Artesanato e Materiais", "Kits", "Serviços"], "Taberna": ["Pães, Bolos e Quitutes", "Sopas e Caldos", "Carnes", "Saladas", "Bebidas", "Banquetes"], "Animais": ["Animais Domésticos", "Montarias e Transportes", "Equipamentos e Complementos para Animais"], "Bens e Posses": ["Moradias", "Mobílias e Itens Domésticos", "Terras e Construções", "Veículos Terrestres"]};
 let activeGroup = groupOrder[0];
 const coinValue = { PC:1, PP:10, PA:100, PO:1000 };
@@ -3810,7 +3820,7 @@ function buildTabs() {
   const tabs = document.getElementById('marketTabs');
   tabs.innerHTML = '';
   groupOrder.forEach(g => {
-    const count = ['Criação de Equipamentos','Criar Poções'].includes(g) ? '' : ' (' + Array.from(document.querySelectorAll('.market-row')).filter(r => r.dataset.group === g).length + ')';
+    const count = ['Criar Poções'].includes(g) ? '' : ' (' + Array.from(document.querySelectorAll('.market-row')).filter(r => r.dataset.group === g).length + ')';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'market-tab' + (g===activeGroup ? ' active' : '');
@@ -3822,11 +3832,14 @@ function buildTabs() {
 function buildSubFilter() {
   const select = document.getElementById('subFilter');
   const current = select.value;
-  if(['Criação de Equipamentos','Criar Poções'].includes(activeGroup)) {
-    select.innerHTML = '<option value="">Todos os equipamentos forjáveis</option>';
+  if(activeGroup === 'Criar Poções') {
+    select.innerHTML = '<option value="">Selecione os ingredientes no criador</option>';
+    select.disabled = true;
     return;
   }
-  const opts = subcats[activeGroup] || [];
+  select.disabled = false;
+  const rows = Array.from(document.querySelectorAll('.market-row'));
+  const opts = [...new Set(rows.filter(r => activeGroup === 'Serviços' ? r.dataset.category === 'Serviços' : r.dataset.group === activeGroup).map(r => r.dataset.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   select.innerHTML = '<option value="">Todas as categorias</option>' + opts.map(s=>`<option value="${safe(s)}">${safe(s)}</option>`).join('');
   if(opts.includes(current)) select.value = current;
 }
@@ -3935,26 +3948,39 @@ function detailObject(row){
 function renderPotionCreator(){
   document.getElementById('marketContent').classList.add('is-hidden');
   document.getElementById('craftContent').classList.add('is-hidden');
+  document.getElementById('serviceCalcContent').classList.add('is-hidden');
   const box=document.getElementById('potionCraftContent'); box.classList.remove('is-hidden');
-  const componentRows=Array.from(document.querySelectorAll('.market-row[data-category="Componentes e Receitas de Poções"]'));
-  const potionRows=Array.from(document.querySelectorAll('.market-row[data-category="Poções"]'));
-  const ingredients=[...new Set(componentRows.flatMap(r=>r.textContent.split(/[,;+]/).map(x=>x.trim()).filter(x=>x.length>2 && x.length<55)))].slice(0,80);
-  box.innerHTML=`<div class="craft-grid"><div class="craft-box"><h3>Criar Poções</h3><p class="craft-note">Selecione os ingredientes disponíveis. As poções serão filtradas automaticamente.</p><div class="potion-ingredients">${ingredients.map((x,i)=>`<label class="ingredient-choice"><input type="checkbox" value="${safe(x)}"> ${safe(x)}</label>`).join('')}</div></div><aside class="craft-box"><h3>Poções possíveis</h3><div id="potionMatches"></div></aside></div>`;
-  const update=()=>{ const selected=Array.from(box.querySelectorAll('input:checked')).map(x=>normalizeText(x.value)); const matches=potionRows.filter(r=>{ const t=normalizeText(r.textContent); return !selected.length || selected.every(x=>t.includes(x.split(' ')[0])); }); document.getElementById('potionMatches').innerHTML=matches.length?matches.slice(0,30).map(r=>{const d=detailObject(r);return `<div class="craft-box"><strong>${safe(d.Nome||'Poção')}</strong><p>${safe(d['Efeito adicional']||'—')}</p><small>${safe(r.querySelector('[data-details]')?.textContent||'')}</small></div>`}).join(''):'<p class="craft-note">Nenhuma poção corresponde aos ingredientes selecionados.</p>'; document.getElementById('marketCount').textContent=`${matches.length} poção(ões) compatível(is).`; };
-  box.querySelectorAll('input').forEach(x=>x.addEventListener('change',update)); update(); updateCart();
+  const components=Array.from(document.querySelectorAll('.market-row[data-category="Componentes e Receitas de Poções"]')).map(rowToItem);
+  const potions=Array.from(document.querySelectorAll('.market-row[data-category="Poções"]')).map(rowToItem);
+  box.innerHTML=`<div class="potion-builder"><section class="craft-box"><h3>Criação de Poções</h3><p class="craft-note">Escolha a poção e marque os componentes utilizados na receita. O custo dos ingredientes e o resultado são atualizados automaticamente.</p><div class="craft-field"><label>Poção produzida</label><select id="potionTarget">${potions.map(p=>`<option value="${safe(p.id)}">${safe(p.nome)} — ${safe(displayPrice(p.preco))}</option>`).join('')}</select></div><div class="potion-toolbar"><input id="ingredientSearch" type="search" placeholder="Buscar componente..."><button class="market-btn compact" id="clearIngredients" type="button">Limpar seleção</button></div><div class="potion-ingredients">${components.map(c=>`<label class="ingredient-choice" data-ingredient-search="${safe(normalizeText(c.nome))}"><input type="checkbox" value="${safe(c.id)}"> <span>${safe(c.nome)}</span><small>${safe(displayPrice(c.preco))}</small></label>`).join('')}</div></section><aside class="craft-box craft-result" id="potionResult"></aside></div>`;
+  const update=()=>{
+    const potion=potions.find(p=>p.id===document.getElementById('potionTarget').value)||potions[0];
+    const selected=Array.from(box.querySelectorAll('.ingredient-choice input:checked')).map(ch=>components.find(c=>c.id===ch.value)).filter(Boolean);
+    const cost=selected.reduce((sum,c)=>sum+parsePrice(c.preco),0);
+    document.getElementById('potionResult').innerHTML=`<h3>${safe(potion?.nome||'Poção')}</h3><div class="craft-kv"><span>Requisito</span><strong>${safe(document.querySelector(`.market-check[data-id="${potion?.id}"]`)?.closest('tr')?.querySelector('[data-field="Requisito"]')?.textContent||'—')}</strong></div><div class="craft-kv"><span>Valor de mercado</span><strong>${safe(displayPrice(potion?.preco||'0 PC'))}</strong></div><div class="craft-kv"><span>Componentes escolhidos</span><strong>${selected.length}</strong></div><div class="craft-kv"><span>Custo dos componentes</span><strong>${formatCoins(cost)}</strong></div><p class="craft-note">${safe(potion?.detalhes||'—')}</p><h3>Receita montada</h3>${selected.length?`<ul class="craft-list">${selected.map(c=>`<li>${safe(c.nome)} — ${safe(displayPrice(c.preco))}</li>`).join('')}</ul>`:'<p class="craft-note">Nenhum componente selecionado.</p>'}`;
+    document.getElementById('marketCount').textContent=`${selected.length} componente(s) selecionado(s).`;
+  };
+  document.getElementById('potionTarget').addEventListener('change',update);
+  box.querySelectorAll('.ingredient-choice input').forEach(x=>x.addEventListener('change',update));
+  document.getElementById('ingredientSearch').addEventListener('input',e=>{const q=normalizeText(e.target.value);box.querySelectorAll('.ingredient-choice').forEach(el=>el.classList.toggle('is-hidden',q&&!el.dataset.ingredientSearch.includes(q)));});
+  document.getElementById('clearIngredients').addEventListener('click',()=>{box.querySelectorAll('.ingredient-choice input').forEach(x=>x.checked=false);update();});
+  update(); updateCart();
 }
 function renderServiceCalculator(){
+  document.getElementById('marketContent').classList.add('is-hidden');
+  document.getElementById('craftContent').classList.add('is-hidden');
+  document.getElementById('potionCraftContent').classList.add('is-hidden');
   const sc=document.getElementById('serviceCalcContent'); if(!sc) return; sc.classList.remove('is-hidden');
   const services=Array.from(document.querySelectorAll('.market-row[data-category="Serviços"]')).map(rowToItem);
-  sc.innerHTML=`<div class="craft-box"><h3>Calculadora de Serviços</h3><div class="craft-grid"><div><div class="craft-field"><label>Serviço</label><select id="serviceItem">${services.map(s=>`<option value="${safe(s.id)}">${safe(s.nome)}</option>`).join('')}</select></div><div class="craft-field" id="serviceGradeBox"><label>Graduação</label><select id="serviceGrade"><option value="1">D</option><option value="1.5">C</option><option value="2">B</option><option value="3">A</option><option value="5">S</option></select></div><div class="craft-field" id="serviceDaysBox"><label>Quantidade de dias</label><input id="serviceDays" type="number" min="1" value="1"></div><div class="craft-field" id="serviceDistanceBox"><label>Distância em km</label><input id="serviceDistance" type="number" min="1" value="1"></div></div><aside id="serviceResult" class="craft-box"></aside></div></div>`;
-  const update=()=>{const s=services.find(x=>x.id===document.getElementById('serviceItem').value)||services[0]; const n=normalizeText(s.nome); const merc=n.includes('mercenario'); const distance=/mensage|transporte|caravana|viagem|entrega|guia/.test(n) && !merc; const days=/mercenario|servo|guarda|hosped|aluguel|trein|guia/.test(n); const grade=/mercenario|guarda|especialista|artesao|mago|curandeiro/.test(n); document.getElementById('serviceDistanceBox').style.display=distance?'':'none'; document.getElementById('serviceDaysBox').style.display=days?'':'none'; document.getElementById('serviceGradeBox').style.display=grade?'':'none'; const base=parsePrice(s.preco), d=days?Math.max(1,+document.getElementById('serviceDays').value||1):1, km=distance?Math.max(1,+document.getElementById('serviceDistance').value||1):1, g=grade?(+document.getElementById('serviceGrade').value||1):1; const total=base*d*km*g; document.getElementById('serviceResult').innerHTML=`<h3>${safe(s.nome)}</h3><div class="craft-kv"><span>Preço base</span><strong>${formatCoins(base)}</strong></div>${grade?`<div class="craft-kv"><span>Graduação</span><strong>${document.getElementById('serviceGrade').selectedOptions[0].text}</strong></div>`:''}${days?`<div class="craft-kv"><span>Dias</span><strong>${d}</strong></div>`:''}${distance?`<div class="craft-kv"><span>Distância</span><strong>${km} km</strong></div>`:''}<div class="craft-kv"><span>Total estimado</span><strong>${formatCoins(total)}</strong></div><p class="craft-note">${safe(s.detalhes||'')}</p>`;}; ['serviceItem','serviceGrade','serviceDays','serviceDistance'].forEach(id=>document.getElementById(id).addEventListener('input',update)); update();
+  sc.innerHTML=`<div class="service-builder"><section class="craft-box"><h3>Calculadora de Serviços</h3><div class="craft-field"><label>Serviço</label><select id="serviceItem">${services.map(s=>`<option value="${safe(s.id)}">${safe(s.nome)} — ${safe(displayPrice(s.preco))}</option>`).join('')}</select></div><div class="service-inputs"><div class="craft-field" id="serviceGradeBox"><label>Graduação</label><select id="serviceGrade"><option value="1">D (×1)</option><option value="1.5">C (×1,5)</option><option value="2">B (×2)</option><option value="3">A (×3)</option><option value="5">S (×5)</option></select></div><div class="craft-field" id="serviceDaysBox"><label>Quantidade / dias</label><input id="serviceDays" type="number" min="1" value="1"></div><div class="craft-field" id="serviceDistanceBox"><label>Distância em km</label><input id="serviceDistance" type="number" min="1" value="1"></div></div></section><aside id="serviceResult" class="craft-box craft-result"></aside></div>`;
+  const update=()=>{const s=services.find(x=>x.id===document.getElementById('serviceItem').value)||services[0]; if(!s){document.getElementById('serviceResult').innerHTML='<p class="craft-note">Nenhum serviço cadastrado.</p>';return;} const n=normalizeText(s.nome); const distance=/mensage|transporte|caravana|viagem|entrega|guia/.test(n); const days=/mercenario|servo|guarda|hosped|aluguel|trein|guia|diaria|dia/.test(n); const grade=/mercenario|guarda|especialista|artesao|mago|curandeiro/.test(n); document.getElementById('serviceDistanceBox').classList.toggle('is-hidden',!distance); document.getElementById('serviceDaysBox').classList.toggle('is-hidden',!days); document.getElementById('serviceGradeBox').classList.toggle('is-hidden',!grade); const base=parsePrice(s.preco), d=days?Math.max(1,+document.getElementById('serviceDays').value||1):1, km=distance?Math.max(1,+document.getElementById('serviceDistance').value||1):1, g=grade?(+document.getElementById('serviceGrade').value||1):1; const total=base*d*km*g; document.getElementById('serviceResult').innerHTML=`<h3>${safe(s.nome)}</h3><div class="craft-kv"><span>Preço base</span><strong>${formatCoins(base)}</strong></div>${grade?`<div class="craft-kv"><span>Graduação</span><strong>${safe(document.getElementById('serviceGrade').selectedOptions[0].text)}</strong></div>`:''}${days?`<div class="craft-kv"><span>Quantidade / dias</span><strong>${d}</strong></div>`:''}${distance?`<div class="craft-kv"><span>Distância</span><strong>${km} km</strong></div>`:''}<div class="craft-kv total-highlight"><span>Total estimado</span><strong>${formatCoins(total)}</strong></div><p class="craft-note">${safe(s.detalhes||'')}</p>`; document.getElementById('marketCount').textContent='Calculadora de serviços ativa.';};
+  ['serviceItem','serviceGrade','serviceDays','serviceDistance'].forEach(id=>document.getElementById(id).addEventListener('input',update)); update(); updateCart();
 }
 function renderMarket() {
   buildTabs();
   buildSubFilter();
-  if(activeGroup === 'Criação de Equipamentos') { renderCrafting(); return; }
-  if(activeGroup === 'Criar Poções') { renderPotionCreator(); return; }
-  if(activeGroup === 'Serviços') { renderServiceCalculator(); }
+    if(activeGroup === 'Criar Poções') { renderPotionCreator(); return; }
+  if(activeGroup === 'Serviços') { renderServiceCalculator(); return; }
 
   const marketContent = document.getElementById('marketContent');
   const craftContent = document.getElementById('craftContent');
@@ -3966,7 +3992,7 @@ function renderMarket() {
   let visibleRows = 0;
 
   document.querySelectorAll('.market-row').forEach(row => {
-    const okGroup = row.dataset.group === activeGroup;
+    const okGroup = activeGroup === 'Serviços' ? row.dataset.category === 'Serviços' : row.dataset.group === activeGroup;
     const okSub = !sub || row.dataset.category === sub;
     const searchable = [
       row.dataset.search,
@@ -4058,6 +4084,16 @@ function buildMarketReportHTML(items) {
   .actions{display:flex;gap:10px;justify-content:center;margin-bottom:22px;}
   button{background:#17110d;color:#f6e4b6;border:1px solid #b79b62;padding:10px 16px;cursor:pointer;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;}
   @media print{body{background:white;padding:0}.actions{display:none}.page{box-shadow:none;border:0;max-width:none;padding:24px}.summary{grid-template-columns:repeat(3,1fr)}}
+
+/* v86 — mercado responsivo e sem rolagem horizontal excessiva */
+.market-wrap{grid-template-columns:minmax(0,1fr) 300px;gap:1rem}.market-panel{padding:1rem;border-radius:10px}.market-tools{position:sticky;top:58px;z-index:4;background:var(--surface);padding:.65rem;margin:-.25rem -.25rem .8rem;border-bottom:1px solid var(--border)}
+.market-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.45rem}.market-tab{min-height:42px;padding:.55rem .65rem}.market-section{border:1px solid var(--border);border-radius:8px;overflow:hidden}.market-section h3{padding:.75rem .85rem;margin:0;background:rgba(155,111,212,.08)}
+.market-table-wrap{overflow:visible;border:0}.market-table{min-width:0!important;table-layout:fixed}.market-table th,.market-table td{padding:.55rem .6rem;word-break:break-word}.market-table th:nth-child(1),.market-table td:nth-child(1){width:58px}.market-table th:nth-child(2),.market-table td:nth-child(2){width:68px}.market-table th:nth-child(3),.market-table td:nth-child(3){width:18%}.market-table th:nth-last-child(2),.market-table td:nth-last-child(2){width:95px}.market-table th:last-child,.market-table td:last-child{width:auto}.qty-input{min-width:54px;padding:.45rem}
+.non-equipment-table [data-field="Acerto"],.non-equipment-table [data-field="CAF"],.non-equipment-table [data-field="CAR"],.non-equipment-table [data-field="Dano"],.non-equipment-table [data-field="Resistência"],.non-equipment-table th.stat-column{display:none}
+.potion-builder,.service-builder{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:1rem;align-items:start}.potion-toolbar,.service-inputs{display:grid;grid-template-columns:1fr auto;gap:.6rem}.service-inputs{grid-template-columns:repeat(3,1fr)}.market-btn.compact{width:auto;margin:0;padding:.55rem .75rem}.ingredient-choice{display:grid;grid-template-columns:auto 1fr auto;gap:.55rem;align-items:center;border-radius:6px}.ingredient-choice small{color:var(--rune-bright)}.total-highlight{margin-top:.6rem;padding:.65rem;background:rgba(155,111,212,.1);border:1px solid var(--ether-glow)}
+@media(max-width:1100px){.market-wrap{grid-template-columns:1fr}.market-sticky{position:static;max-height:none}.potion-builder,.service-builder{grid-template-columns:1fr}}
+@media(max-width:760px){.market-tools{position:static;grid-template-columns:1fr}.market-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap}.market-tab{min-width:145px}.market-table,.market-table tbody,.market-table tr,.market-table td{display:block;width:100%!important}.market-table thead{display:none}.market-table tr{padding:.65rem;border-bottom:1px solid var(--border)}.market-table td{border:0;padding:.3rem .35rem}.market-table td::before{content:attr(data-field);display:inline-block;min-width:105px;color:var(--ether-pale);font-family:'Cinzel',serif;font-size:.62rem;text-transform:uppercase}.market-table td:first-child,.market-table td:nth-child(2){display:inline-block;width:48%!important}.market-table td:first-child::before{content:'Selecionar'}.market-table td:nth-child(2)::before{content:'Quantidade'}.service-inputs,.potion-toolbar{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -4104,6 +4140,8 @@ function openMarketReport() {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+function markMarketTableColumns(){document.querySelectorAll('.market-section').forEach(sec=>{const isEquipment=sec.dataset.group==='Equipamentos';const table=sec.querySelector('.market-table');if(!table)return;table.classList.toggle('non-equipment-table',!isEquipment);table.querySelectorAll('th').forEach(th=>{if(['Acerto','CAF','CAR','Dano','Resistência'].includes(th.textContent.trim()))th.classList.add('stat-column');});});}
+markMarketTableColumns();
 initializePriceLabels();
 document.getElementById('marketSearch').addEventListener('input', renderMarket);
 document.getElementById('subFilter').addEventListener('change', renderMarket);
