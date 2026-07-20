@@ -70,6 +70,44 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 @media(max-width:1100px){.market-wrap{grid-template-columns:1fr}.market-sticky{position:static;max-height:none}.potion-builder,.service-builder{grid-template-columns:1fr}}
 @media(max-width:760px){.market-tools{position:static;grid-template-columns:1fr}.market-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap}.market-tab{min-width:145px}.market-table,.market-table tbody,.market-table tr,.market-table td{display:block;width:100%!important}.market-table thead{display:none}.market-table tr{padding:.65rem;border-bottom:1px solid var(--border)}.market-table td{border:0;padding:.3rem .35rem}.market-table td::before{content:attr(data-field);display:inline-block;min-width:105px;color:var(--ether-pale);font-family:'Cinzel',serif;font-size:.62rem;text-transform:uppercase}.market-table td:first-child,.market-table td:nth-child(2){display:inline-block;width:48%!important}.market-table td:first-child::before{content:'Selecionar'}.market-table td:nth-child(2)::before{content:'Quantidade'}.service-inputs,.potion-toolbar{grid-template-columns:1fr}}
 
+
+
+/* v87 — interface profissional em cartões, sem compressão lateral */
+.market-wrap{grid-template-columns:minmax(0,1fr) 320px;gap:1.25rem}
+.market-panel{border-radius:12px;background:linear-gradient(180deg,rgba(24,17,39,.98),rgba(14,10,24,.98));box-shadow:0 18px 45px rgba(0,0,0,.28)}
+.market-tools{position:static;margin:0 0 1rem;padding:0 0 1rem;background:transparent;grid-template-columns:minmax(0,1fr) minmax(210px,280px)}
+.market-tabs{display:flex;flex-wrap:wrap;gap:.55rem;padding-bottom:.15rem}
+.market-tab{border-radius:8px;min-height:40px;padding:.62rem .9rem;transition:.18s ease}
+.market-tab.active{box-shadow:0 0 0 1px rgba(155,111,212,.18),0 8px 24px rgba(0,0,0,.2)}
+.market-section{overflow:visible;border:0;background:transparent;margin-bottom:1.4rem}
+.market-section h3{border:1px solid var(--border);border-bottom:0;border-radius:10px 10px 0 0;padding:.8rem 1rem;background:rgba(155,111,212,.1)}
+.market-table-wrap{overflow:visible;background:transparent}
+table.market-table, .market-table tbody{display:block;width:100%;min-width:0!important}
+.market-table thead{display:none}
+.market-table tbody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;padding:.75rem;border:1px solid var(--border);border-radius:0 0 10px 10px;background:rgba(0,0,0,.1)}
+.market-table tr{display:grid;grid-template-columns:52px 72px minmax(0,1fr);gap:.42rem .7rem;align-items:start;padding:.85rem;border:1px solid rgba(155,111,212,.24);border-radius:9px;background:rgba(255,255,255,.018);min-width:0;transition:.16s ease}
+.market-table tr:hover{border-color:rgba(155,111,212,.55);background:rgba(155,111,212,.045);transform:translateY(-1px)}
+.market-table td{display:grid!important;grid-template-columns:112px minmax(0,1fr);gap:.55rem;width:auto!important;min-width:0;border:0!important;padding:.25rem 0!important;overflow-wrap:anywhere;word-break:normal}
+.market-table td::before{content:attr(data-field);font-family:'Cinzel',serif;font-size:.61rem;letter-spacing:.07em;text-transform:uppercase;color:var(--ether-pale);line-height:1.35}
+.market-table td:first-child,.market-table td:nth-child(2){display:flex!important;align-items:center;grid-template-columns:none;width:auto!important;padding:0!important}
+.market-table td:first-child{grid-column:1}
+.market-table td:nth-child(2){grid-column:2}
+.market-table td:first-child::before,.market-table td:nth-child(2)::before{display:none}
+.market-table td:nth-child(3){grid-column:3;display:block!important;padding:.1rem 0 .45rem!important;border-bottom:1px solid rgba(155,111,212,.18)!important;font-size:1.08rem}
+.market-table td:nth-child(3)::before{display:none}
+.market-table td:nth-child(n+4){grid-column:1/-1}
+.market-table .qty-input{width:64px;min-width:0;box-sizing:border-box}
+.market-table .price{white-space:normal}
+.market-table .item-name{font-size:1.05rem;color:#f2e9ff}
+.non-equipment-table [data-field="Acerto"],.non-equipment-table [data-field="CAF"],.non-equipment-table [data-field="CAR"],.non-equipment-table [data-field="Dano"],.non-equipment-table [data-field="Resistência"]{display:none!important}
+.market-sticky{border-radius:12px;max-height:calc(100vh - 90px)}
+#cartList{scrollbar-width:thin}
+.potion-builder,.service-builder{grid-template-columns:minmax(0,1fr) minmax(280px,360px)}
+.ingredient-choice{background:rgba(255,255,255,.018);border-radius:8px}
+@media(max-width:1180px){.market-table tbody{grid-template-columns:1fr}.market-wrap{grid-template-columns:minmax(0,1fr) 290px}}
+@media(max-width:980px){.market-wrap{grid-template-columns:1fr}.market-sticky{position:static;max-height:none}.market-tools{grid-template-columns:1fr 240px}}
+@media(max-width:680px){.market-panel{padding:.8rem}.market-tools{grid-template-columns:1fr}.market-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.market-tab{min-width:0}.market-table tbody{padding:.55rem}.market-table tr{grid-template-columns:44px 66px minmax(0,1fr);padding:.72rem}.market-table td{grid-template-columns:96px minmax(0,1fr)}.potion-builder,.service-builder{grid-template-columns:1fr}.service-inputs,.potion-toolbar{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body><nav class="topbar">
@@ -1834,13 +1872,13 @@ table.market-table { width:100%; border-collapse:collapse; min-width:880px; font
 </tbody></table></div></div></section><section class="market-group" data-group-section="Runas"><h2 class="market-group-title">Runas</h2><div class="market-section" data-category-section="Runas" data-group="Runas">
 <h3>Runas</h3>
 <div class="market-table-wrap"><table class="market-table"><thead><tr><th>Comprar</th><th>Qtd.</th><th>Nome</th><th>Tipo</th><th>Requisito</th><th>Preço</th><th>Efeito</th></tr></thead><tbody>
-<tr class="market-row" data-category="Runas" data-group="Runas" data-search="runas runas nome: runa da água | tipo: incomum | requisito: encantamento 27 | preço: 10 po | efeito: +1 sorte">
+<tr class="market-row" data-category="Runas" data-group="Runas" data-search="runas runas nome: runa da água | tipo: incomum | requisito: encantamento 27 | preço: 10 po | efeito: concede +5 de dano de água.">
 <td><input class="market-check" data-id="item-269" type="checkbox"/></td>
 <td class="qty-cell"><input class="qty-input" data-qty="item-269" min="1" step="1" type="number" value="1"/></td>
 
 
 
-<td data-field="Nome"><span class="item-name" data-name="">Runa da Água</span></td><td data-field="Tipo">Incomum</td><td data-field="Requisito">Encantamento 27</td><td class="price" data-field="Preço" data-price="10 PO">10 PO</td><td data-details="" data-field="Efeito">+1 sorte</td></tr><tr class="market-row" data-category="Runas" data-group="Runas" data-search="runas runas nome: runa do fogo | tipo: incomum | requisito: encantamento 27 | preço: 10 po | efeito: concede +5 de dano de fogo.">
+<td data-field="Nome"><span class="item-name" data-name="">Runa da Água</span></td><td data-field="Tipo">Incomum</td><td data-field="Requisito">Encantamento 27</td><td class="price" data-field="Preço" data-price="10 PO">10 PO</td><td data-details="" data-field="Efeito">Concede +5 de dano de água.</td></tr><tr class="market-row" data-category="Runas" data-group="Runas" data-search="runas runas nome: runa do fogo | tipo: incomum | requisito: encantamento 27 | preço: 10 po | efeito: concede +5 de dano de fogo.">
 <td><input class="market-check" data-id="item-270" type="checkbox"/></td>
 <td class="qty-cell"><input class="qty-input" data-qty="item-270" min="1" step="1" type="number" value="1"/></td>
 
