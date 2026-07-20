@@ -77,6 +77,18 @@
 
   @media (max-width: 980px){ .calc-wrap{grid-template-columns:1fr;} .sticky{position:static;} .xp-sheet-grid{grid-template-columns:1fr;} }
   @media (max-width: 720px){ .range-line{grid-template-columns:1fr 1fr 1fr;} .range-name{grid-column:1/-1;} .line-total{text-align:left;} .xp-row,.xp-row.qty,.xp-row.wide{grid-template-columns:1fr 1fr;} .xp-row .range-name,.xp-row .line-total{grid-column:1/-1;text-align:left;} }
+
+  /* v84 — Ajustes mobile da calculadora XP/PT */
+  @media (max-width: 720px){
+    input[type=number]{
+      min-height:44px;
+      font-size:16px;
+      touch-action:manipulation;
+      -webkit-text-size-adjust:100%;
+    }
+    .xp-row input,.xp-row select{font-size:16px;min-height:44px;}
+    .summary-row .value{font-size:1rem;}
+  }
 </style>
 </head>
 <body><nav class="topbar">
@@ -480,6 +492,36 @@ const rows = [
   {box:'habilidadesBox', type:'abilityRange', name:'Dualidades Elementais', profile:'duality', note:'Custos: 90, 100, 110, 120 e 130 PT'},
 ];
 function fmt(n){ return (Math.round(n*100)/100).toLocaleString('pt-BR'); }
+function parseCalcNumber(value, fallback=0){
+  if(value === null || value === undefined) return fallback;
+  if(typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+  let raw = String(value).trim();
+  if(!raw) return fallback;
+  raw = raw.replace(/\s/g,'');
+  // Aceita digitação mobile com vírgula decimal e textos formatados em pt-BR.
+  if(raw.includes(',') && raw.includes('.')) raw = raw.replace(/\./g,'').replace(',', '.');
+  else raw = raw.replace(',', '.');
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+function calcInputNumber(el, fallback=0){
+  return parseCalcNumber(el?.value, fallback);
+}
+function calcDisplayNumber(text, fallback=0){
+  return parseCalcNumber(String(text||'').replace(/[^0-9,.-]/g,''), fallback);
+}
+function enhanceMobileNumericInputs(scope=document){
+  scope.querySelectorAll('input[type="number"]').forEach(inp=>{
+    inp.setAttribute('inputmode','numeric');
+    inp.setAttribute('pattern','[0-9]*');
+    inp.autocomplete = 'off';
+  });
+}
+function scheduleCalc(){
+  clearTimeout(window.__cronicasCalcTimer);
+  window.__cronicasCalcTimer = setTimeout(()=>{ if(typeof calc === 'function') calc(); }, 0);
+}
+
 function costBetween(current, desired, rangeKey){
   current = Math.max(0, Number(current)||0); desired = Math.max(0, Number(desired)||0);
   if(desired <= current) return 0;
@@ -540,21 +582,26 @@ function render(){
   rows.forEach((r,i)=> document.getElementById(r.box).insertAdjacentHTML('beforeend', rowHTML(r,i)));
   renderEvolution();
   renderCriacao();
-  document.querySelectorAll('input, select, textarea').forEach(inp => inp.addEventListener('input', calc));
+  enhanceMobileNumericInputs(document);
+  document.querySelectorAll('input, select, textarea').forEach(inp => {
+    inp.addEventListener('input', scheduleCalc);
+    inp.addEventListener('change', scheduleCalc);
+    inp.addEventListener('keyup', scheduleCalc);
+  });
   calc();
 }
 function getActiveDiscount(kind){
   if(kind === 'talent'){
-    return document.getElementById('discountTalentToggle')?.checked ? Math.max(0, Number(document.getElementById('discountTalentValue')?.value)||0) : 0;
+    return document.getElementById('discountTalentToggle')?.checked ? Math.max(0, calcInputNumber(document.getElementById('discountTalentValue'),0)) : 0;
   }
   if(kind === 'ability'){
-    return document.getElementById('discountAbilityToggle')?.checked ? Math.max(0, Number(document.getElementById('discountAbilityValue')?.value)||0) : 0;
+    return document.getElementById('discountAbilityToggle')?.checked ? Math.max(0, calcInputNumber(document.getElementById('discountAbilityValue'),0)) : 0;
   }
   return 0;
 }
 function getAbilityPercentDiscount(profile){
   if(profile !== 'free') return 0;
-  return document.getElementById('discountAbilityPercentToggle')?.checked ? Math.max(0, Math.min(100, Number(document.getElementById('discountAbilityPercentValue')?.value)||0)) : 0;
+  return document.getElementById('discountAbilityPercentToggle')?.checked ? Math.max(0, Math.min(100, calcInputNumber(document.getElementById('discountAbilityPercentValue'),0))) : 0;
 }
 function applyPTDiscount(baseCost, flatDiscount=0, percentDiscount=0){
   let cost = Number(baseCost)||0;
@@ -569,29 +616,17 @@ function refreshDiscountFields(){
 function calc(){
   refreshDiscountFields();
   let xp = 0, pt = 0;
-  const talentosComprados = document.getElementById('talentosComprados')?.value?.trim() || '';
-  const habilidadesCompradas = document.getElementById('habilidadesCompradas')?.value?.trim() || '';
-  if(talentosComprados){
-    lines.push('TALENTOS COMPRADOS');
-    talentosComprados.split('\n').forEach(l=>{ if(l.trim()) lines.push('  ' + l.trim()); });
-    lines.push('');
-  }
-  if(habilidadesCompradas){
-    lines.push('HABILIDADES COMPRADAS');
-    habilidadesCompradas.split('\n').forEach(l=>{ if(l.trim()) lines.push('  ' + l.trim()); });
-    lines.push('');
-  }
   rows.forEach((r,i)=>{
     let total = 0;
     if(r.type === 'ptFixed'){
-      const q = Number(document.querySelector(`[data-idx="${i}"][data-kind="qty"]`)?.value)||0;
+      const q = calcInputNumber(document.querySelector(`[data-idx="${i}"][data-kind="qty"]`),0);
       const unitCost = r.discount === 'talent' ? applyPTDiscount(r.cost, getActiveDiscount('talent'), 0) : r.cost;
       total = q * unitCost; pt += total;
       const el = document.getElementById('total-'+i); if(el) el.textContent = fmt(total)+' PT';
     } else if(r.type === 'ptRange'){
       const c = document.querySelector(`[data-idx="${i}"][data-kind="current"]`);
       const d = document.querySelector(`[data-idx="${i}"][data-kind="desired"]`);
-      const cv = Math.floor(Number(c?.value)||r.min), dv = Math.floor(Number(d?.value)||r.min);
+      const cv = Math.floor(calcInputNumber(c,r.min)), dv = Math.floor(calcInputNumber(d,r.min));
       if(d && c && dv < cv) d.style.borderColor = '#e0708a'; else if(d) d.style.borderColor = '';
       for(let lvl = cv + 1; lvl <= dv; lvl++) total += r.costs[lvl] || 0;
       pt += total;
@@ -600,8 +635,8 @@ function calc(){
       const c = document.querySelector(`[data-idx="${i}"][data-kind="current"]`);
       const d = document.querySelector(`[data-idx="${i}"][data-kind="desired"]`);
       const profile = abilityProfiles[r.profile] || [];
-      const cv = Math.max(0, Math.floor(Number(c?.value)||0));
-      const dv = Math.max(0, Math.floor(Number(d?.value)||0));
+      const cv = Math.max(0, Math.floor(calcInputNumber(c,0)));
+      const dv = Math.max(0, Math.floor(calcInputNumber(d,0)));
       if(d && c && dv < cv) d.style.borderColor = '#e0708a'; else if(d) d.style.borderColor = '';
       if(dv > cv){
         const flatDiscount = getActiveDiscount('ability');
@@ -613,7 +648,7 @@ function calc(){
     } else {
       const c = document.querySelector(`[data-idx="${i}"][data-kind="current"]`);
       const d = document.querySelector(`[data-idx="${i}"][data-kind="desired"]`);
-      const cv = Number(c?.value)||0, dv = Number(d?.value)||0;
+      const cv = calcInputNumber(c,0), dv = calcInputNumber(d,0);
       if(d && c && dv < cv) d.style.borderColor = '#e0708a'; else if(d) d.style.borderColor = '';
       total = costBetween(cv,dv,r.key); xp += total;
       const el = document.getElementById('total-'+i); if(el) el.textContent = fmt(total)+' XP';
@@ -621,8 +656,8 @@ function calc(){
   });
   pt += calcEvolution();
   pt += calcCriacao();
-  const xpTotal = Number(document.getElementById('xpTotal').value)||0;
-  const ptManual = Number(document.getElementById('ptTotal').value)||0;
+  const xpTotal = calcInputNumber(document.getElementById('xpTotal'),0);
+  const ptManual = calcInputNumber(document.getElementById('ptTotal'),0);
   const ptAuto = xpTotal * 2;
   const ptTotal = ptManual + ptAuto;
   document.getElementById('xpSpent').textContent = fmt(xp);
@@ -644,10 +679,10 @@ function buildDistributionLines(){
   lines.push('Gerado em: ' + new Date().toLocaleString('pt-BR'));
   lines.push('');
   lines.push('RESUMO');
-  lines.push('XP disponivel: ' + fmt(Number(document.getElementById('xpTotal').value)||0));
+  lines.push('XP disponivel: ' + fmt(calcInputNumber(document.getElementById('xpTotal'),0)));
   lines.push('XP gasto: ' + document.getElementById('xpSpent').textContent);
   lines.push('XP restante: ' + document.getElementById('xpLeft').textContent);
-  lines.push('PT disponivel manual: ' + fmt(Number(document.getElementById('ptTotal').value)||0));
+  lines.push('PT disponivel manual: ' + fmt(calcInputNumber(document.getElementById('ptTotal'),0)));
   lines.push('PT automatico: ' + document.getElementById('ptAuto').textContent);
   lines.push('PT gasto: ' + document.getElementById('ptSpent').textContent);
   lines.push('PT restante: ' + document.getElementById('ptLeft').textContent);
@@ -661,6 +696,18 @@ function buildDistributionLines(){
     if(talentDiscount) lines.push('Desconto em talentos: -' + fmt(talentDiscount) + ' PT por talento');
     if(abilityDiscount) lines.push('Desconto em habilidades: -' + fmt(abilityDiscount) + ' PT por habilidade');
     if(abilityPercent) lines.push('Desconto percentual em habilidades livres: ' + fmt(abilityPercent) + '%');
+    lines.push('');
+  }
+  const talentosComprados = document.getElementById('talentosComprados')?.value?.trim() || '';
+  const habilidadesCompradas = document.getElementById('habilidadesCompradas')?.value?.trim() || '';
+  if(talentosComprados){
+    lines.push('TALENTOS COMPRADOS');
+    talentosComprados.split('\n').forEach(l=>{ if(l.trim()) lines.push('  ' + l.trim()); });
+    lines.push('');
+  }
+  if(habilidadesCompradas){
+    lines.push('HABILIDADES COMPRADAS');
+    habilidadesCompradas.split('\n').forEach(l=>{ if(l.trim()) lines.push('  ' + l.trim()); });
     lines.push('');
   }
   rows.forEach((r,i)=>{
@@ -768,6 +815,18 @@ function buildDistributionHTML(lines){
   .actions{display:flex;gap:10px;justify-content:center;margin-bottom:22px;}
   button{background:#17110d;color:#f6e4b6;border:1px solid #b79b62;padding:10px 16px;cursor:pointer;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;}
   @media print{body{background:white;padding:0}.actions{display:none}.page{box-shadow:none;border:0;max-width:none;padding:24px}}
+
+  /* v84 — Ajustes mobile da calculadora XP/PT */
+  @media (max-width: 720px){
+    input[type=number]{
+      min-height:44px;
+      font-size:16px;
+      touch-action:manipulation;
+      -webkit-text-size-adjust:100%;
+    }
+    .xp-row input,.xp-row select{font-size:16px;min-height:44px;}
+    .summary-row .value{font-size:1rem;}
+  }
 </style>
 </head>
 <body>
@@ -801,10 +860,10 @@ function validateAndExport(){
   const problems=[];
   document.querySelectorAll('[data-kind="desired"]').forEach(d=>{
     const i=d.dataset.idx; const c=document.querySelector(`[data-idx="${i}"][data-kind="current"]`);
-    if(c && Number(d.value) < Number(c.value)) problems.push('Existe valor desejado menor que o valor atual.');
+    if(c && calcInputNumber(d,0) < calcInputNumber(c,0)) problems.push('Existe valor desejado menor que o valor atual.');
   });
-  if((Number(document.getElementById('xpLeft').textContent.replace(/\./g,'').replace(',','.'))||0) < 0) problems.push('XP gasto acima do XP disponível.');
-  if((Number(document.getElementById('ptLeft').textContent.replace(/\./g,'').replace(',','.'))||0) < 0) problems.push('PT gasto acima do PT disponível.');
+  if(calcDisplayNumber(document.getElementById('xpLeft').textContent,0) < 0) problems.push('XP gasto acima do XP disponível.');
+  if(calcDisplayNumber(document.getElementById('ptLeft').textContent,0) < 0) problems.push('PT gasto acima do PT disponível.');
   if(problems.length && !confirm('A validação encontrou avisos:\n- ' + [...new Set(problems)].join('\n- ') + '\n\nDeseja exportar mesmo assim?')) return;
   const distributionLines = buildDistributionLines();
   openDistributionPage(distributionLines);
@@ -813,6 +872,18 @@ function validateAndExport(){
     window.cronicasSaveValidatedDistribution(distributionLines).catch(err => console.warn('Não foi possível registrar a distribuição:', err));
   }
 }
+
+
+// Recalculo delegado: corrige navegadores mobile que nem sempre disparam input em campos number.
+document.addEventListener('input', (ev)=>{
+  if(ev.target && ev.target.matches('input, select, textarea')) scheduleCalc();
+}, true);
+document.addEventListener('change', (ev)=>{
+  if(ev.target && ev.target.matches('input, select, textarea')) scheduleCalc();
+}, true);
+document.addEventListener('touchend', (ev)=>{
+  if(ev.target && ev.target.matches('input[type="number"], select, textarea')) scheduleCalc();
+}, true);
 
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
@@ -882,7 +953,7 @@ function findCalcLineByName(name){
 function setCurrentByName(name, value, copyToDesired=true){
   const line=findCalcLineByName(name);
   if(!line) return console.warn('Campo não encontrado na calculadora:', name);
-  const n=Number(value)||0;
+  const n=parseCalcNumber(value,0);
   const current=line.querySelector('[data-kind="current"]');
   const desired=line.querySelector('[data-kind="desired"]');
   if(current) current.value=n;
@@ -940,8 +1011,8 @@ function getDesiredRowsByCategory(){
     const current=line.querySelector('[data-kind="current"]');
     if(!desired || !name) return;
     const desiredRaw=String(desired.value ?? '').trim();
-    const currentValue=Number(current?.value)||0;
-    const parsed=Number(desiredRaw);
+    const currentValue=calcInputNumber(current,0);
+    const parsed=parseCalcNumber(desiredRaw, NaN);
     const value=(!desiredRaw || parsed<0) ? currentValue : parsed;
     if(attrs.includes(name)) out.atributos[name]=value;
     else if(focos.includes(name)) out.focos[name]=value;
@@ -986,8 +1057,8 @@ function hasPremiumToolAccess(profile){
 async function persistValidatedDistribution(lines){
   if (savingDistribution) return;
   savingDistribution = true;
-  const xpSpent = Number((document.getElementById('xpSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
-  const ptSpent = Number((document.getElementById('ptSpent')?.textContent || '0').replace(/\./g,'').replace(',','.')) || 0;
+  const xpSpent = calcDisplayNumber(document.getElementById('xpSpent')?.textContent,0);
+  const ptSpent = calcDisplayNumber(document.getElementById('ptSpent')?.textContent,0);
   const linkedCharacter = Number.isInteger(loadedCharacterIndex) ? loadedCharacters[loadedCharacterIndex] : null;
   const characterUpdate = linkedCharacter ? buildCharacterUpdateFromDesired(linkedCharacter) : null;
   const payload = {
